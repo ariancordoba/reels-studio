@@ -76,7 +76,7 @@ function Editor({ c }: { c: Cliente | null }) {
         <button className="btn-primary" disabled={!f.nombre.trim() || saving} onClick={save}>Guardar</button>
       </div>
       <div className="grid grid-cols-2 gap-5">
-        <Field label="Nombre"><input className="input" value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} placeholder="Ej: Club Norte" /></Field>
+        <Field label="Nombre"><input className="input" value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} placeholder="Ej: Café Aurora" /></Field>
         <Field label="Oscurecido por defecto" hint="Más alto = los textos se leen mejor sobre fondos claros">
           <div className="flex items-center gap-3 h-11"><input type="range" min={0} max={0.7} step={0.01} value={f.darken} onChange={e => setF({ ...f, darken: +e.target.value })} className="flex-1 accent-ink" /><span className="font-mono w-12 text-right">{Math.round(f.darken * 100)}%</span></div>
         </Field>
@@ -89,7 +89,7 @@ function Editor({ c }: { c: Cliente | null }) {
           <select className="input" value={f.serif_font} onChange={e => setF({ ...f, serif_font: e.target.value })}>{fonts.map(x => <option key={x}>{x}</option>)}</select>
         </Field>
         <div className="col-span-2">
-          <Field label="Pie de página (una línea por renglón)"><textarea className="input h-24 py-3 resize-none" value={footer} onChange={e => setFooter(e.target.value)} placeholder={"CLUB NORTE · COPA PRIMAVERA\nInscripciones abiertas"} /></Field>
+          <Field label="Pie de página (una línea por renglón)"><textarea className="input h-24 py-3 resize-none" value={footer} onChange={e => setFooter(e.target.value)} placeholder={"CAFÉ AURORA · PALERMO\nPedidos por mensaje privado"} /></Field>
         </div>
         <div className="col-span-2">
           <Field label="Notas para Claude" hint="Tono, palabras que usa la marca, cosas a evitar"><textarea className="input h-20 py-3 resize-none" value={f.notas} onChange={e => setF({ ...f, notas: e.target.value })} /></Field>
@@ -98,8 +98,8 @@ function Editor({ c }: { c: Cliente | null }) {
 
       {/* muestra */}
       <div className="mt-6 rounded-[22px] bg-ink p-6 text-center" style={{ background: `linear-gradient(rgba(0,0,0,${f.darken}),rgba(0,0,0,${f.darken})), #4a8fd8` }}>
-        <div className="text-[34px] font-black uppercase tracking-tight leading-none" style={{ color: f.text }}>Copa <span style={{ color: f.accent }}>Primavera</span></div>
-        <div className="mt-2 font-serif text-lg" style={{ color: f.text }}>Una jornada a puro fútbol.</div>
+        <div className="text-[34px] font-black uppercase tracking-tight leading-none" style={{ color: f.text }}>Nueva <span style={{ color: f.accent }}>colección</span></div>
+        <div className="mt-2 font-serif text-lg" style={{ color: f.text }}>Llegó el otoño.</div>
         <div className="mt-6 text-[11px] font-bold tracking-wide" style={{ color: f.text }}>{footer.split("\n")[0]}</div>
       </div>
 

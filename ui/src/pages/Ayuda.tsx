@@ -79,7 +79,7 @@ export default function Ayuda() {
           <div className="flex items-center gap-2 mb-4"><Sparkles size={18} className="text-lime" /><span className="font-medium">Cómo pedir cambios</span></div>
           <div className="space-y-2.5 text-[15px]">
             <Ex bad="no me gusta" good="el título más grande y que entre más rápido" />
-            <Ex bad="cambiá la toma" good="al principio usá la toma donde patean al arco" />
+            <Ex bad="cambiá la toma" good="al principio usá la toma donde se ve el producto de cerca" />
             <Ex bad="más lindo" good="el verde más clarito y sin los emojis" />
           </div>
           <div className="text-white/60 text-sm mt-4">Concreto = menos idas y vueltas = menos uso de tu plan.</div>

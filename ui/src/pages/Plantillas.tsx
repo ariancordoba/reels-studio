@@ -82,8 +82,8 @@ export default function Plantillas() {
               {withVersion.map(p => <option key={p.id} value={p.id}>{p.titulo} · {p.version_actual}</option>)}
             </select>
           </Field>
-          <Field label="Nombre"><input className="input" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Evento deportivo 11 s" /></Field>
-          <Field label="Para qué sirve"><input className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ej: anuncio de torneo con drop" /></Field>
+          <Field label="Nombre"><input className="input" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Lanzamiento de producto 11 s" /></Field>
+          <Field label="Para qué sirve"><input className="input" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Ej: promo con cuenta regresiva" /></Field>
           <button className="btn-primary w-full" disabled={!pid || !nombre.trim()} onClick={create}>Guardar plantilla</button>
         </div>
 

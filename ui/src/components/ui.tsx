@@ -3,6 +3,16 @@ import { FileVideo, UploadCloud, X } from "lucide-react";
 
 export const ICON = { size: 20, strokeWidth: 1.75 } as const;
 
+/** Imágenes de un pegado (Ctrl+V de una captura) o de un arrastre. Las pegadas vienen como "image.png": se renombran. */
+export function imagesFrom(dt: DataTransfer | null): File[] {
+  if (!dt) return [];
+  const files = Array.from(dt.files ?? []).filter(f => f.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(f.name));
+  const stamp = Date.now();
+  return files.map((f, i) => (f.name === "image.png" || !f.name)
+    ? new File([f], `pegada-${stamp}-${i}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type })
+    : f);
+}
+
 export function cx(...c: (string | false | null | undefined)[]) { return c.filter(Boolean).join(" "); }
 
 export function Badge({ tone = "muted", children, dot }: { tone?: "muted" | "lime" | "danger" | "warn" | "ink" | "ok"; children: ReactNode; dot?: boolean }) {
@@ -95,7 +105,8 @@ export function Dropzone({ label, hint, files, onFiles, accept = "video/*", mult
         <ul className="mt-2 space-y-1.5">
           {files.map((f, i) => (
             <li key={i} className="flex items-center gap-2 h-10 px-3 rounded-[14px] bg-surface-muted text-sm">
-              <FileVideo size={16} strokeWidth={1.75} className="text-ink-muted" />
+              {f.type.startsWith("image/") ? <img src={URL.createObjectURL(f)} className="size-7 rounded-[6px] object-cover" alt="" />
+                : <FileVideo size={16} strokeWidth={1.75} className="text-ink-muted" />}
               <span className="truncate flex-1">{f.name}</span>
               <span className="font-mono text-[12px] text-ink-muted">{(f.size / 1e6).toFixed(0)} MB</span>
               <button className="text-ink-muted hover:text-ink" onClick={() => onFiles(files.filter((_, j) => j !== i))}><X size={16} /></button>

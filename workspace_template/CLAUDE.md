@@ -38,7 +38,7 @@ No renderices el video completo: eso lo hace ella desde la app.
 2. Mirá las hojas de la referencia y `cortes.jpg`: cuántos planos, cuánto dura cada uno, cuántas líneas de
    texto por plano, dónde van (casi siempre en el tercio de arriba), qué palabra va resaltada, cuándo entra
    cada línea, si hay pie de página fijo, cómo termina.
-3. Mirá las hojas de cada crudo y elegí **los mejores momentos** (acción, caras, pelota, gente festejando;
+3. Mirá las hojas de cada crudo y elegí **los mejores momentos** (acción, caras, el producto o servicio bien visible, gente sonriendo;
    evitá cuadros movidos, fuera de foco o con dedos). `movimiento_por_segundo` ayuda a encontrar la acción.
 4. Escribí `versiones/v1/spec.json`.
 5. `reels check versiones/v1` → corregí hasta que no haya errores.
@@ -111,11 +111,11 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
               { "type": "fade_out", "t": 10.6, "dur": 0.4 }],  // también "fade_in"
   "scenes": [  // bloques de texto; cada escena se ve entre t0 y t1
     { "t0": 0.0, "t1": 2.0, "lines": [
-      { "kind": "display", "text": "CLUB NORTE", "size": 38, "y": 330, "delay": 0.0, "spacing": "0.12em" },
-      { "kind": "display", "text": "⚡ TORNEO", "size": 112, "y": 385, "delay": 0.10 },
-      { "kind": "display", "text": "*PRIMAVERA*", "size": 112, "y": 500, "delay": 0.30 },
-      { "kind": "serif", "text": "Una jornada a puro fútbol.", "size": 60, "y": 620, "delay": 0.5 },
-      { "kind": "emoji", "text": "⚽🔥", "size": 120, "y": 700, "delay": 0.9 } ] }
+      { "kind": "display", "text": "CAFÉ AURORA", "size": 38, "y": 330, "delay": 0.0, "spacing": "0.12em" },
+      { "kind": "display", "text": "✨ NUEVA", "size": 112, "y": 385, "delay": 0.10 },
+      { "kind": "display", "text": "*CARTA*", "size": 112, "y": 500, "delay": 0.30 },
+      { "kind": "serif", "text": "Sabores de otoño, desde hoy.", "size": 60, "y": 620, "delay": 0.5 },
+      { "kind": "emoji", "text": "☕🍂", "size": 120, "y": 700, "delay": 0.9 } ] }
   ],
   "footer": ["LÍNEA 1 DEL PIE", "línea 2"],   // fijo abajo (y≈1700), entra una vez y se queda
   "music": { "mode": "synth", "bpm": 120, "key": "Am", "progression": ["Am","F","C","G"],

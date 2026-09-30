@@ -5,7 +5,7 @@ import {
 import {
   api, activeJob, fecha, fileUrl, hace, useStore, type ChatMsg, type Proyecto, type Trabajo, type Version,
 } from "../api";
-import { Badge, ICON, Progress, Segmented, cx } from "../components/ui";
+import { Badge, ICON, Progress, Segmented, cx, imagesFrom } from "../components/ui";
 import { go, openClaude } from "../App";
 import { jobFraction, statusOf } from "./Inicio";
 import GuionEditor from "./Guion";
@@ -162,7 +162,7 @@ function Player({ p, v, job }: { p: Proyecto; v?: Version; job?: Trabajo }) {
 }
 
 function saveTemplate(p: Proyecto) {
-  const nombre = prompt("Nombre de la plantilla (por ejemplo: Evento deportivo 11 s)", p.titulo);
+  const nombre = prompt("Nombre de la plantilla (por ejemplo: Lanzamiento de producto 11 s)", p.titulo);
   if (!nombre) return;
   api("/plantillas", { method: "POST", json: { proyecto: p.id, nombre, descripcion: "" } })
     .then(() => alert("Plantilla guardada. La vas a ver al crear un video nuevo."))
@@ -214,6 +214,8 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
   const [sending, setSending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const addImages = (imgs: File[]) => imgs.length && setFiles(prev => [...prev, ...imgs].slice(0, 6));
   const end = useRef<HTMLDivElement>(null);
   const msgs: ChatMsg[] = p.chat ?? [];
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs.length, job?.stage]);
@@ -291,14 +293,17 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
               ))}
             </div>
           )}
-          <div className="flex items-end gap-2 rounded-[22px] bg-surface-muted p-2">
+          <div className={cx("flex items-end gap-2 rounded-[22px] bg-surface-muted p-2 border-2 transition-colors", dragging ? "border-ink bg-lime/30" : "border-transparent")}
+            onDragOver={e => { if (!busy) { e.preventDefault(); setDragging(true); } }} onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); if (!busy) addImages(imagesFrom(e.dataTransfer)); }}>
             <button className="icon-btn size-11 shrink-0 bg-transparent hover:bg-surface" title="Adjuntar imágenes de referencia (así lo quiero)" disabled={busy}
               onClick={() => fileInput.current?.click()}><ImagePlus size={19} strokeWidth={1.75} /></button>
             <input ref={fileInput} type="file" accept="image/*" multiple className="hidden"
               onChange={e => { setFiles([...files, ...Array.from(e.target.files ?? [])].slice(0, 6)); e.target.value = ""; }} />
             <textarea value={txt} onChange={e => setTxt(e.target.value)} rows={2} disabled={busy}
+              onPaste={e => { const imgs = imagesFrom(e.clipboardData); if (imgs.length) { e.preventDefault(); addImages(imgs); } }}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={off ? "Claude no está conectado (mirá Ajustes)" : busy ? "Esperá a que Claude termine…" : "Ej: el verde más claro y que el título entre más rápido"}
+              placeholder={off ? "Claude no está conectado (mirá Ajustes)" : busy ? "Esperá a que Claude termine…" : "Ej: el verde más claro… (podés pegar o arrastrar imágenes)"}
               className="flex-1 bg-transparent resize-none outline-none px-3 py-2 leading-relaxed" />
             <button className="btn-primary size-11 px-0 shrink-0" disabled={busy || !txt.trim()} onClick={() => send()}><Send size={18} strokeWidth={1.75} /></button>
           </div>

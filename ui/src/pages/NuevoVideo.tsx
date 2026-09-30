@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clapperboard, Film, LayoutTemplate, Sparkles, Zap } from "lucide-react";
 import { useStore, type Proyecto } from "../api";
-import { Dropzone, Field, ICON, Progress, cx } from "../components/ui";
+import { Dropzone, Field, ICON, Progress, cx, imagesFrom } from "../components/ui";
 import AccentInput from "../components/AccentInput";
 import { ClientAvatar, go, openClaude } from "../App";
 
@@ -38,6 +38,12 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
     setTextos(t ? Object.fromEntries(t.campos.map(c => [c.key, c.texto])) : {});
   };
   const claudeOff = !!estado && !estado.claude.ok;
+  // imágenes pegadas (Ctrl+V) o arrastradas sobre las instrucciones: se suman a las referencias de estilo
+  const imgHandlers = {
+    onPaste: (e: React.ClipboardEvent) => { const imgs = imagesFrom(e.clipboardData); if (imgs.length) { e.preventDefault(); setRefs(r => [...r, ...imgs]); toast(imgs.length === 1 ? "Imagen agregada a las referencias" : `${imgs.length} imágenes agregadas a las referencias`); } },
+    onDragOver: (e: React.DragEvent) => { if (Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault(); },
+    onDrop: (e: React.DragEvent) => { const imgs = imagesFrom(e.dataTransfer); if (imgs.length) { e.preventDefault(); setRefs(r => [...r, ...imgs]); toast("Imagen agregada a las referencias"); } },
+  };
   const needsClaude = modo !== "rapido";
 
   const ok = cliente && titulo.trim() && crudos.length > 0 && sending == null && (!needsClaude || !claudeOff);
@@ -107,7 +113,7 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
 
         <Step n={2} title="Nombre y crudos">
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="col-span-2"><Field label="Nombre del video"><input className="input" placeholder="Ej: Copa Primavera" value={titulo} onChange={e => setTitulo(e.target.value)} /></Field></div>
+            <div className="col-span-2"><Field label="Nombre del video"><input className="input" placeholder="Ej: Lanzamiento colección otoño" value={titulo} onChange={e => setTitulo(e.target.value)} /></Field></div>
             {!pl && <Field label="Duración (opcional)"><input className="input font-mono" placeholder="11 s" inputMode="decimal" value={duracion} onChange={e => setDuracion(e.target.value.replace(/[^0-9.]/g, ""))} /></Field>}
           </div>
           <Dropzone label="Subí tus crudos" hint="Arrastrá los videos o hacé clic · .mov, .mp4 · mejor verticales, con buena luz" files={crudos} onFiles={setCrudos} icon={<Film {...ICON} />} />
@@ -124,9 +130,9 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
           {!pl && (
             <div className="mt-4 space-y-4">
               <Dropzone label="Referencias de estilo" hint="Reels o imágenes (capturas de posteos que te gusten) · opcional" accept="video/*,image/*" files={refs} onFiles={setRefs} icon={<Sparkles {...ICON} />} />
-              <Field label="Instrucciones / guion" hint="Qué es, cuándo, dónde, qué tiene que decir, el tono. Cuanto más concreto, menos correcciones.">
-                <textarea className="input h-40 py-3 resize-none leading-relaxed" value={instr} onChange={e => setInstr(e.target.value)}
-                  placeholder={"Qué: Copa Primavera del Club Norte\nCuándo: 10 de octubre\nDónde: cancha principal del club\nPara quién: categorías infantiles\nTono: enérgico"} />
+              <Field label="Instrucciones / guion" hint="Qué es, cuándo, dónde, qué tiene que decir, el tono. Podés pegar (Ctrl+V) o arrastrar imágenes de estilo.">
+                <textarea className="input h-40 py-3 resize-none leading-relaxed" value={instr} onChange={e => setInstr(e.target.value)} {...imgHandlers}
+                  placeholder={"Qué: lanzamiento de la colección otoño\nCuándo: desde el lunes 10\nDónde: local de Palermo y tienda online\nPara quién: mujeres de 25 a 40\nTono: cálido y descontracturado"} />
               </Field>
             </div>
           )}
@@ -174,7 +180,7 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
                   text="Claude mira tus crudos y ajusta encuadres y textos respetando la plantilla." />
               </div>
               {modo === "claude_plantilla" && (
-                <Field label="Algo más para Claude (opcional)"><textarea className="input h-24 py-3 resize-none" value={instr} onChange={e => setInstr(e.target.value)} /></Field>
+                <Field label="Algo más para Claude (opcional)" hint="Podés pegar o arrastrar imágenes de estilo acá."><textarea className="input h-24 py-3 resize-none" value={instr} onChange={e => setInstr(e.target.value)} {...imgHandlers} /></Field>
               )}
             </div>
           )}
