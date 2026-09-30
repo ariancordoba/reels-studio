@@ -27,9 +27,9 @@ def _noop(e):
 
 # Uso de Claude (Ajustes): cuánto "cerebro" usar en cada tarea. Con suscripción no se paga por token,
 # pero cada tarea consume del límite de uso: Sonnet rinde mucho más que Opus para cambios chicos.
-MODES = {
-    "calidad": {"primera": None, "cambio": None, "estilo": None},
-    "equilibrado": {"primera": None, "cambio": "sonnet", "estilo": None},
+MODES = {  # "calidad" (Opus en todo) es el default
+    "calidad": {"primera": "opus", "cambio": "opus", "estilo": "opus"},
+    "equilibrado": {"primera": "opus", "cambio": "sonnet", "estilo": "opus"},
     "ahorro": {"primera": "sonnet", "cambio": "sonnet", "estilo": "sonnet"},
 }
 MAX_TURNS = {"primera": 70, "cambio": 35, "estilo": 50}
@@ -39,7 +39,7 @@ def runner_for(task: str) -> ClaudeRunner:
     from . import settings
 
     cfg = settings.load()
-    mode = MODES.get(cfg.get("claude_modo") or "equilibrado", MODES["equilibrado"])
+    mode = MODES.get(cfg.get("claude_modo") or "calidad", MODES["calidad"])
     return ClaudeRunner(model=cfg.get("claude_model") or mode[task], max_turns=MAX_TURNS[task])
 
 
@@ -70,9 +70,10 @@ def _validate_and_preview(vdir: Path, emit: Emit) -> tuple[list[str], list[str]]
     if errors:
         return errors, warns
     shots = list((vdir / "stills").glob("t*.jpg"))
-    if not shots or max(p.stat().st_mtime for p in shots) < (vdir / "spec.json").stat().st_mtime:
-        emit({"type": "status", "text": "Generando la vista previa…"})
-        stills.render(t.spec, t.clips(), vdir / "stills", font_dirs=t.font_dirs)
+    stale = not shots or max(p.stat().st_mtime for p in shots) < (vdir / "spec.json").stat().st_mtime
+    if stale or not (vdir / "stills" / ".completa").exists():  # la de Claude es corta: para ella, la completa
+        emit({"type": "status", "text": "Generando la vista previa completa…"})
+        stills.render(t.spec, t.clips(), vdir / "stills", font_dirs=t.font_dirs, dense=True)
     return [], warns
 
 
@@ -149,7 +150,7 @@ def first_version(project: Path, emit: Emit = _noop, cancel: threading.Event | N
 
 
 def request_change(project: Path, pedido: str, emit: Emit = _noop, cancel: threading.Event | None = None,
-                   runner: ClaudeRunner | None = None) -> dict:
+                   runner: ClaudeRunner | None = None, adjuntos: list[str] | None = None) -> dict:
     runner = runner or runner_for("cambio")
     with projects.project_lock(project, "cambios"):
         projects.sync_shared(project)
@@ -165,6 +166,9 @@ def request_change(project: Path, pedido: str, emit: Emit = _noop, cancel: threa
                   f"Modificá lo mínimo ahí, verificá con `reels check versiones/{vdir.name}` y "
                   f"`reels stills versiones/{vdir.name}`, mirá los cuadros afectados y escribí notas.md. "
                   "Terminá con el resumen corto para ella.")
+        if adjuntos:
+            prompt += ("\n\nAdjuntó imágenes de referencia para este pedido (miralas con Read; muestran lo que quiere: "
+                       "estilo de letra, colores, disposición): " + ", ".join(f"`{a}`" for a in adjuntos))
         res = _run_claude(project, vdir, prompt, emit, cancel, runner)
         out = _finish_version(project, vdir, res, pedido, emit, runner, cancel, base)
         if not out["ok"]:

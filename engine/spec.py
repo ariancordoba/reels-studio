@@ -8,12 +8,17 @@ Los errores salen en español para que Claude (o la UI) los pueda mostrar tal cu
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 EPS = 1e-6
+# textos de relleno que nunca pueden llegar a un video ("acá va la frase clave", "[TÍTULO]", "lorem ipsum"…)
+PLACEHOLDER = re.compile(
+    r"\bac[aá] va\b|\baqu[ií] va\b|\bva ac[aá]\b|\btexto (de )?(ejemplo|aqu[ií]|ac[aá])\b|\blorem\b|\bipsum\b|"
+    r"\bplaceholder\b|\bfrase clave\b|\bTBD\b|\bxxx+\b|\[[^\]]*\]|\{[^}]*\}|<[^>]*>", re.I)
 
 
 class _M(BaseModel):
@@ -254,8 +259,15 @@ def check(spec: Spec, clip_durations: dict[str, float]) -> tuple[list[str], list
         off = abs(c - round(c / beat) * beat)
         if off > frame + EPS:
             warns.append(f"el corte en {c:.2f}s cae a {off * 1000:.0f} ms del beat más cercano ({spec.bpm:g} BPM)")
+    if not spec.scenes or not any(sc.lines for sc in spec.scenes):
+        errors.append("el video no tiene ningún texto: agregá escenas con líneas (título, frase, etc.)")
     for sc in spec.scenes:
+        if not sc.lines:
+            errors.append(f"la escena {sc.t0}–{sc.t1}s no tiene líneas de texto: completala o sacala")
         for ln in sc.lines:
+            if PLACEHOLDER.search(ln.text.replace("*", "")):
+                errors.append(f"escena {sc.t0}s: '{ln.text}' es un texto de relleno. Escribí el texto real "
+                              "(si falta un dato, escribí un texto completo que funcione igual y avisalo en el resumen)")
             if ln.text.count("*") % 2:
                 warns.append(f"escena {sc.t0}s, '{ln.text}': asteriscos sin cerrar")
             if not 0 <= ln.y <= spec.format.h:

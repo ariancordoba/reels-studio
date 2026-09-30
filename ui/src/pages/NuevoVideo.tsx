@@ -123,7 +123,7 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
 
           {!pl && (
             <div className="mt-4 space-y-4">
-              <Dropzone label="Referencias" hint="El reel cuyo estilo querés copiar (opcional)" files={refs} onFiles={setRefs} icon={<Sparkles {...ICON} />} />
+              <Dropzone label="Referencias de estilo" hint="Reels o imágenes (capturas de posteos que te gusten) · opcional" accept="video/*,image/*" files={refs} onFiles={setRefs} icon={<Sparkles {...ICON} />} />
               <Field label="Instrucciones / guion" hint="Qué es, cuándo, dónde, qué tiene que decir, el tono. Cuanto más concreto, menos correcciones.">
                 <textarea className="input h-40 py-3 resize-none leading-relaxed" value={instr} onChange={e => setInstr(e.target.value)}
                   placeholder={"Qué: Copa Primavera del Club Norte\nCuándo: 10 de octubre\nDónde: cancha principal del club\nPara quién: categorías infantiles\nTono: enérgico"} />

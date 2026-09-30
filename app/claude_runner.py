@@ -10,6 +10,7 @@ Claude Agent SDK + API key sin tocar el resto de la app.
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 import threading
@@ -28,6 +29,10 @@ SYSTEM = (
     "Sólo escribís dentro de la carpeta del proyecto y sólo corrés comandos `reels`. "
     "Tu último mensaje se le muestra a ella tal cual: 2 a 4 líneas en español rioplatense, sin tecnicismos."
 )
+# "el modelo X no está disponible para tu plan / no existe": se reintenta con el modelo por defecto
+MODEL_ERROR = re.compile(
+    r"(model|modelo).{0,80}(not (available|found|supported|allowed|enabled)|no (est[aá] )?disponible|access|"
+    r"permission|upgrade|invalid|unknown)|(invalid|unknown|unsupported|no access to).{0,40}(model|modelo)", re.I)
 AUTH_ERRORS = ("failed to authenticate", "oauth", "not logged in", "invalid api key", "please run /login",
                "authentication", "401")
 
@@ -129,6 +134,19 @@ class ClaudeRunner:
 
     def run(self, cwd: Path, prompt: str, session_id: str | None = None,
             on_event: Callable[[dict], None] | None = None, cancel: threading.Event | None = None) -> Result:
+        res = self._run(cwd, prompt, session_id, on_event, cancel)
+        if not res.ok and self.model and res.error == "failed" and MODEL_ERROR.search(res.text or ""):
+            # el plan de esta cuenta no incluye ese modelo (p. ej. Opus): seguir con el modelo por defecto
+            (on_event or (lambda e: None))({"type": "status", "text": f"Tu plan no incluye {self.model}: sigo con el modelo por defecto…"})
+            wanted, self.model = self.model, None
+            try:
+                res = self._run(cwd, prompt, session_id, on_event, cancel)
+            finally:
+                self.model = wanted
+        return res
+
+    def _run(self, cwd: Path, prompt: str, session_id: str | None = None,
+             on_event: Callable[[dict], None] | None = None, cancel: threading.Event | None = None) -> Result:
         emit = on_event or (lambda e: None)
         if not self.exe:
             return Result(False, "No encuentro Claude Code en esta compu. Instalalo desde Ajustes → Reparar.",

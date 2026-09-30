@@ -268,6 +268,27 @@ async def post_proyecto(titulo: str = Form(...), cliente: str = Form(...), instr
 
 class Pedido(BaseModel):
     texto: str
+    adjuntos: list[str] = []  # rutas relativas al proyecto (subidas antes con /adjuntos)
+
+
+@router.post("/proyectos/{pid}/adjuntos")
+async def adjuntar(pid: str, archivos: list[UploadFile] = File(...)):
+    """Imágenes para un pedido ("así quiero el título"): quedan en entrada/adjuntos, achicadas."""
+    from engine.analyze import IMAGE_EXT, shrink_image
+
+    p = project_path(pid)
+    d = p / "entrada" / "adjuntos"
+    d.mkdir(parents=True, exist_ok=True)
+    out = []
+    for up in archivos:
+        name = Path(up.filename).name
+        if Path(name).suffix.lower() not in IMAGE_EXT:
+            raise HTTPException(400, f"{name}: sólo imágenes (jpg, png, webp)")
+        dst = d / f"{time.strftime('%Y%m%d-%H%M%S')}_{name}"
+        with open(dst, "wb") as f:
+            shutil.copyfileobj(up.file, f)
+        out.append(shrink_image(dst).relative_to(p).as_posix())
+    return {"adjuntos": out}
 
 
 @router.post("/proyectos/{pid}/pedir")
@@ -275,11 +296,12 @@ def pedir(pid: str, body: Pedido):
     p = project_path(pid)
     if not body.texto.strip():
         raise HTTPException(400, "Escribí qué querés cambiar")
-    chat_add(p, "yo", body.texto.strip())
+    adj = [a for a in body.adjuntos if (p / a).resolve().is_relative_to(p.resolve()) and (p / a).exists()]
+    chat_add(p, "yo", body.texto.strip(), adjuntos=adj)
     if projects.current_version(p) is None:
         fn = lambda emit, cancel: workflow.first_version(p, emit, cancel)  # noqa: E731
         return _claude_job(p, "primera", "Primera versión", fn).public()
-    fn = lambda emit, cancel: workflow.request_change(p, body.texto, emit, cancel)  # noqa: E731
+    fn = lambda emit, cancel: workflow.request_change(p, body.texto, emit, cancel, adjuntos=adj)  # noqa: E731
     return _claude_job(p, "cambio", body.texto[:60], fn).public()
 
 
@@ -319,7 +341,7 @@ def render(pid: str, body: RenderReq):
             with projects.project_lock(p, titles[body.calidad]):
                 if body.calidad != "stills":
                     projects.save_meta(p, etapa="render")
-                args = ["stills", str(v)] if body.calidad == "stills" else \
+                args = ["stills", str(v), "--completo"] if body.calidad == "stills" else \
                     ["render", str(v), *(["--draft"] if body.calidad == "borrador" else [])]
                 res = run_cli(j, args)
                 res["version"] = v.name

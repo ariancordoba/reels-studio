@@ -19,6 +19,25 @@ import numpy as np
 from .probe import NO_WINDOW, ffmpeg_exe, probe
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
+def shrink_image(path: Path, max_side: int = 1600) -> Path:
+    """Imágenes de referencia: a lo sumo 1600 px y en JPG (se ven igual y Claude gasta menos al mirarlas)."""
+    img = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        return path
+    h, w = img.shape[:2]
+    k = min(1.0, max_side / max(h, w))
+    if k < 1:
+        img = cv2.resize(img, (int(w * k), int(h * k)), interpolation=cv2.INTER_AREA)
+    out = path.with_suffix(".jpg")
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if ok:
+        buf.tofile(str(out))
+        if out != path:
+            path.unlink(missing_ok=True)
+    return out
 THUMB_W = 270  # vertical 270×480 por cuadro: legible y liviano
 COLS, ROWS = 6, 3
 
@@ -183,9 +202,13 @@ def slug(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", Path(name).stem)[:60]
 
 
-def summary_md(results: list[dict]) -> str:
+def summary_md(results: list[dict], images: list[str] | None = None) -> str:
     L = ["# Análisis", "",
          "Hojas de contacto: cada cuadro tiene su segundo abajo. Miralas con Read (son imágenes).", ""]
+    if images:
+        L += ["## Imágenes de referencia (estilo que ella quiere)",
+              "Miralas con Read: tipografías, colores, disposición de textos, tono. Imitá ese estilo.", ""]
+        L += [f"- `{i}`" for i in images] + [""]
     for r in results:
         base = f"analisis/{slug(r['archivo'])}"
         L.append(f"## {r['tipo'].capitalize()}: `{r['archivo']}`")
@@ -219,5 +242,7 @@ def analyze_project(project: Path, progress=None) -> list[dict]:
         progress and progress(i, len(items), p.name)
         results.append(analyze_video(p, out / slug(p.name), kind))
     progress and progress(len(items), len(items), "")
-    (out / "resumen.md").write_text(summary_md(results), encoding="utf-8")
+    images = [shrink_image(p) for p in sorted((entrada / "referencias").glob("*")) if p.suffix.lower() in IMAGE_EXT]
+    rel = [p.relative_to(project).as_posix() for p in images]
+    (out / "resumen.md").write_text(summary_md(results, rel), encoding="utf-8")
     return results

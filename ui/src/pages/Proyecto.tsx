@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Check, Download, Eye, Film, FolderOpen, Images, LayoutTemplate, Loader2, Play, RotateCcw, Send, Sparkles, X, Zap,
+  ArrowLeft, Check, Download, Eye, Film, FolderOpen, Grid3x3, ImagePlus, Images, LayoutTemplate, Loader2, Play, RotateCcw, Send, Sparkles, X, Zap,
 } from "lucide-react";
 import {
   api, activeJob, fecha, fileUrl, hace, useStore, type ChatMsg, type Proyecto, type Trabajo, type Version,
@@ -108,7 +108,7 @@ function JobBar({ job }: { job: Trabajo }) {
 
 function Player({ p, v, job }: { p: Proyecto; v?: Version; job?: Trabajo }) {
   const hasVideo = !!(v?.video || v?.borrador);
-  const [mode, setMode] = useState<"video" | "cuadros">(hasVideo ? "video" : "cuadros");
+  const [mode, setMode] = useState<"video" | "cuadros" | "todos">(hasVideo ? "video" : "cuadros");
   const [i, setI] = useState(0);
   useEffect(() => { setMode(v?.video || v?.borrador ? "video" : "cuadros"); setI(0); }, [v?.id, v?.video, v?.borrador]);
   const src = v?.video ? "video.mp4" : v?.borrador ? "borrador.mp4" : null;
@@ -118,9 +118,21 @@ function Player({ p, v, job }: { p: Proyecto; v?: Version; job?: Trabajo }) {
       <div className="flex items-center justify-between mb-3 px-1">
         <Segmented size="sm" value={mode} onChange={setMode}
           options={[{ id: "video", label: <span className="flex items-center gap-1.5"><Play size={14} /> Video</span> },
-            { id: "cuadros", label: <span className="flex items-center gap-1.5"><Images size={14} /> Cuadros</span> }]} />
+            { id: "cuadros", label: <span className="flex items-center gap-1.5"><Images size={14} /> Cuadros</span> },
+            { id: "todos", label: <span className="flex items-center gap-1.5"><Grid3x3 size={14} /> Todos</span> }]} />
         <span className="label">{src === "video.mp4" ? "Render final 1080p" : src === "borrador.mp4" ? "Borrador 540p" : "Sin render todavía"}</span>
       </div>
+      {mode === "todos" && v ? (
+        <div className="grid grid-cols-4 gap-2 max-h-[64vh] overflow-y-auto pr-1">
+          {v.stills.map((s, k) => (
+            <button key={s} onClick={() => { setI(k); setMode("cuadros"); }} className="text-left">
+              <img src={fileUrl(p.id, `versiones/${v.id}/stills/${s}`, bust)} className="w-full aspect-[9/16] object-cover rounded-[10px]" alt="" />
+              <div className="font-mono text-[11px] text-ink-muted mt-0.5">{parseFloat(s.slice(1)).toFixed(1)} s</div>
+            </button>
+          ))}
+          {!v.stills.length && <div className="col-span-4 label py-10 text-center">Sin cuadros: tocá “Vista previa”.</div>}
+        </div>
+      ) : (
       <div className="relative mx-auto aspect-[9/16] max-h-[64vh] rounded-[20px] overflow-hidden bg-ink">
         {!v ? (
           <div className="absolute inset-0 grid place-items-center text-white/60 text-center p-8">
@@ -134,6 +146,7 @@ function Player({ p, v, job }: { p: Proyecto; v?: Version; job?: Trabajo }) {
           <div className="absolute inset-0 grid place-items-center text-white/60 text-sm">Sin cuadros: tocá “Vista previa rápida”.</div>
         )}
       </div>
+      )}
       {mode === "cuadros" && v && v.stills.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
           {v.stills.map((s, k) => (
@@ -199,14 +212,23 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
   const { toast, estado } = useStore();
   const [txt, setTxt] = useState("");
   const [sending, setSending] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const msgs: ChatMsg[] = p.chat ?? [];
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [msgs.length, job?.stage]);
-  const send = (t = txt) => {
+  const send = async (t = txt) => {
     if (!t.trim()) return;
     setSending(true);
-    api(`/proyectos/${encodeURIComponent(p.id)}/pedir`, { method: "POST", json: { texto: t } })
-      .then(() => { setTxt(""); onSent(); }).catch(e => toast(e.message, "error")).finally(() => setSending(false));
+    try {
+      let adjuntos: string[] = [];
+      if (files.length) {
+        const fd = new FormData(); files.forEach(f => fd.append("archivos", f));
+        adjuntos = (await api<{ adjuntos: string[] }>(`/proyectos/${encodeURIComponent(p.id)}/adjuntos`, { method: "POST", body: fd })).adjuntos;
+      }
+      await api(`/proyectos/${encodeURIComponent(p.id)}/pedir`, { method: "POST", json: { texto: t, adjuntos } });
+      setTxt(""); setFiles([]); onSent();
+    } catch (e) { toast((e as Error).message, "error"); } finally { setSending(false); }
   };
   const quick = (tipo: string) => api(`/proyectos/${encodeURIComponent(p.id)}/ajuste`, { method: "POST", json: { tipo } })
     .then(onSent).catch(e => toast(e.message, "error"));
@@ -221,6 +243,8 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
           <div key={i} className="flex justify-end">
             <div className="max-w-[80%] rounded-[20px] rounded-br-[8px] bg-surface-muted px-4 py-3 whitespace-pre-wrap">
               {m.tipo === "inicio" && <div className="label mb-1">Instrucciones</div>}{m.texto}
+              {!!m.adjuntos?.length && <div className="flex gap-2 mt-2 flex-wrap">{m.adjuntos.map(a =>
+                <img key={a} src={fileUrl(p.id, a)} className="h-20 rounded-[10px] object-cover" alt="" />)}</div>}
             </div>
           </div>
         ) : (
@@ -257,7 +281,21 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
             <span className="text-[12px] text-ink-muted flex items-center gap-1 mr-1"><Sparkles size={13} /> Ideas para Claude:</span>
             {SUGERENCIAS.map(s => <button key={s} disabled={busy} onClick={() => setTxt(s)} className="chip hover:bg-line disabled:opacity-40">{s}</button>)}
           </div>
+          {files.length > 0 && (
+            <div className="flex gap-2 mb-2 flex-wrap">
+              {files.map((f, i) => (
+                <div key={i} className="relative">
+                  <img src={URL.createObjectURL(f)} className="h-16 w-16 rounded-[12px] object-cover" alt="" />
+                  <button className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-ink text-white grid place-items-center" onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={12} /></button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2 rounded-[22px] bg-surface-muted p-2">
+            <button className="icon-btn size-11 shrink-0 bg-transparent hover:bg-surface" title="Adjuntar imágenes de referencia (así lo quiero)" disabled={busy}
+              onClick={() => fileInput.current?.click()}><ImagePlus size={19} strokeWidth={1.75} /></button>
+            <input ref={fileInput} type="file" accept="image/*" multiple className="hidden"
+              onChange={e => { setFiles([...files, ...Array.from(e.target.files ?? [])].slice(0, 6)); e.target.value = ""; }} />
             <textarea value={txt} onChange={e => setTxt(e.target.value)} rows={2} disabled={busy}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
               placeholder={off ? "Claude no está conectado (mirá Ajustes)" : busy ? "Esperá a que Claude termine…" : "Ej: el verde más claro y que el título entre más rápido"}

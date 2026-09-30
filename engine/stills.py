@@ -23,6 +23,15 @@ def default_times(spec: Spec) -> list[float]:
     return ts
 
 
+def dense_times(spec: Spec, step: float = 0.5, cap: int = 48) -> list[float]:
+    """Vista previa completa (para ella): un cuadro cada `step` s + el momento en que se asienta cada escena."""
+    d = spec.format.duration
+    n = min(cap, int(d / step))
+    ts = {round(step / 2 + i * (d - step / 2) / max(1, n - 1), 2) for i in range(n)}
+    ts |= set(default_times(spec))
+    return sorted(t for t in ts if t < d)
+
+
 def contact_sheet(images: list[np.ndarray], labels: list[str], cols: int = 4, thumb_w: int = 360) -> np.ndarray:
     th = [cv2.resize(im, (thumb_w, int(im.shape[0] * thumb_w / im.shape[1])), interpolation=cv2.INTER_AREA) for im in images]
     h = th[0].shape[0]
@@ -38,8 +47,10 @@ def contact_sheet(images: list[np.ndarray], labels: list[str], cols: int = 4, th
 
 
 def render(spec: Spec, clips: dict[str, Path], out_dir: Path, times: list[float] | None = None,
-           font_dirs: list[Path] | None = None, scale: float = 1.0) -> list[Path]:
-    times = times or default_times(spec)
+           font_dirs: list[Path] | None = None, scale: float = 1.0, dense: bool = False) -> list[Path]:
+    times = times or (dense_times(spec) if dense else default_times(spec))
+    if dense and scale == 1.0:
+        scale = 0.5  # muchos cuadros: a media resolución alcanza para revisar y es el doble de rápido
     fps = spec.format.fps
     ov = overlay.render(spec, sorted({round(t * fps) for t in times}), scale, font_dirs)
     comp = Composer(spec, clips, scale, ov)
@@ -55,5 +66,9 @@ def render(spec: Spec, clips: dict[str, Path], out_dir: Path, times: list[float]
         paths.append(p)
         imgs.append(img)
     sheet = out_dir / "hoja.jpg"
-    cv2.imwrite(str(sheet), contact_sheet(imgs, [f"{t:.2f}s" for t in times]), [cv2.IMWRITE_JPEG_QUALITY, 88])
+    cols = 6 if len(imgs) > 12 else 4
+    cv2.imwrite(str(sheet), contact_sheet(imgs, [f"{t:.2f}s" for t in times], cols=cols,
+                                          thumb_w=240 if cols == 6 else 360), [cv2.IMWRITE_JPEG_QUALITY, 85])
+    marker = out_dir / ".completa"
+    marker.write_text("1") if dense else marker.unlink(missing_ok=True)
     return [*paths, sheet]

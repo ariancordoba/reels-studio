@@ -11,13 +11,13 @@ export default function Ajustes() {
   const [name, setName] = useState("");
   const [dir, setDir] = useState("");
   const [quality, setQuality] = useState("final");
-  const [modo, setModo] = useState("equilibrado");
+  const [modo, setModo] = useState("calidad");
   const [src, setSrc] = useState("");
   const [sys, setSys] = useState<Sistema | null>(null);
   useEffect(() => {
     if (!estado) return;
     setName(estado.config.user_name); setDir(estado.config.data_dir || estado.data_dir); setQuality(estado.config.quality || "final");
-    setModo(estado.config.claude_modo || "equilibrado"); setSrc(estado.config.update_source || "");
+    setModo(estado.config.claude_modo || "calidad"); setSrc(estado.config.update_source || "");
   }, [estado]);
   const check = () => { setSys(null); api<Sistema>("/sistema").then(setSys).then(() => refresh(["estado"])).catch(e => toast(e.message, "error")); };
   useEffect(check, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -40,7 +40,7 @@ export default function Ajustes() {
         <Field label="Calidad por defecto">
           <div><Segmented value={quality} onChange={setQuality} options={[{ id: "borrador", label: "Borrador 540p" }, { id: "final", label: "Final 1080p" }]} /></div>
         </Field>
-        <Field label="Uso de Claude" hint={MODOS.find(m => m.id === modo)?.hint}>
+        <Field label="Modelo de Claude" hint={MODOS.find(m => m.id === modo)?.hint}>
           <div><Segmented value={modo} onChange={setModo} options={MODOS.map(m => ({ id: m.id, label: m.label }))} /></div>
         </Field>
         <details className="text-sm">
@@ -98,9 +98,9 @@ export function Onboarding() {
 }
 
 const MODOS = [
-  { id: "calidad", label: "Máxima calidad", hint: "El modelo más capaz en todo. Consume más de tu plan." },
-  { id: "equilibrado", label: "Equilibrado", hint: "El más capaz para la primera versión y uno más liviano para los cambios. Recomendado." },
-  { id: "ahorro", label: "Ahorro", hint: "Un modelo liviano para todo: rinde mucho más tu plan, con algo menos de criterio." },
+  { id: "calidad", label: "Opus", hint: "Opus en todo: la mejor calidad (recomendado). Si tu plan no incluye Opus, se usa el modelo por defecto." },
+  { id: "equilibrado", label: "Opus + Sonnet", hint: "Opus para la primera versión y Sonnet para los cambios: rinde más tu plan." },
+  { id: "ahorro", label: "Sonnet", hint: "Sonnet en todo: más rápido y rinde mucho más tu plan, con algo menos de criterio." },
 ];
 
 interface Upd { configurado: boolean; actual: string; disponible: boolean; version?: string; notas?: string; error?: string; desarrollo?: boolean; auto?: boolean; lista?: string | null }

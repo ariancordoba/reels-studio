@@ -24,7 +24,7 @@ export interface Proyecto {
   chat?: ChatMsg[]; instrucciones?: string;
 }
 
-export interface ChatMsg { rol: "yo" | "claude"; texto: string; fecha: string; version?: string; ok?: boolean; tipo?: string; sin_claude?: boolean }
+export interface ChatMsg { rol: "yo" | "claude"; texto: string; fecha: string; version?: string; ok?: boolean; tipo?: string; sin_claude?: boolean; adjuntos?: string[] }
 
 export interface Cliente {
   slug: string; nombre: string; accent: string; text: string; display_font: string; serif_font: string;

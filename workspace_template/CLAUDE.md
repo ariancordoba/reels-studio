@@ -10,7 +10,8 @@ convierte en video. Nunca escribís código ni tocás el motor: sólo specs y no
 |---|---|
 | `entrada/instrucciones.md` | lo que ella quiere: guion, textos, datos (fecha, lugar), duración, tono |
 | `entrada/crudos/` | videos crudos del cliente (el material que se edita) |
-| `entrada/referencias/` | video(s) de referencia: el **estilo** a imitar (ritmo de cortes, cantidad de texto por plano, animación) |
+| `entrada/referencias/` | video(s) de referencia: el **estilo** a imitar (ritmo de cortes, cantidad de texto por plano, animación). También puede haber **imágenes** (capturas de posteos o reels que le gustan): miralas con Read e imitá tipografía, colores, cantidad de texto y disposición |
+| `entrada/adjuntos/` | imágenes que adjuntó en un pedido de cambio ("así quiero el título"): el pedido te dice cuáles mirar |
 | `analisis/resumen.md` | **empezá por acá**: duración, cortes y tempo de la referencia, movimiento por segundo de cada crudo |
 | `analisis/<video>/hoja_NN.jpg` | hojas de contacto (un cuadro cada 0.5 s con su segundo abajo). Son imágenes: miralas con Read |
 | `analisis/<video>/cortes.jpg` | (referencias) primer cuadro de cada plano |
@@ -68,8 +69,12 @@ video sale bien de entrada. No anotes cosas de un solo video ("cambiar la fecha 
 ### Siempre
 - Terminá con un **resumen corto en español rioplatense** (2–4 líneas, sin tecnicismos: nada de "spec",
   "JSON", "t0") de qué hiciste y, si algo no se pudo, por qué. Ese texto se le muestra a ella tal cual.
-- Si falta un dato imprescindible (ej. la fecha del evento) no lo inventes: usá un texto genérico razonable
-  y avisalo en el resumen.
+- **Nunca dejes textos de relleno** ("acá va la frase clave", "[TÍTULO]", "texto de ejemplo"): el video se
+  publica tal cual. Siempre escribí textos reales, cortos y con gancho, pensados para el público de ella.
+  Si te piden "una frase clave" o "un slogan", **inventalo vos** (es tu trabajo de copywriter).
+  Si falta un dato que no se puede inventar (fecha, dirección, precio), armá el texto sin ese dato
+  ("¡Inscripciones abiertas!" en vez de una fecha falsa) y avisalo en el resumen. `reels check` rechaza el relleno.
+- Todas las escenas tienen que tener texto: un video sin textos no sirve.
 - Nunca bajes nada de internet (ni música ni fuentes). Sólo escribí dentro de esta carpeta.
 
 ## El spec

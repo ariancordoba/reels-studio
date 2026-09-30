@@ -74,7 +74,7 @@ def cmd_stills(a, out):
     times = [float(x) for x in a.times.split(",")] if a.times else None
     dest = Path(a.out) if a.out else t.out_dir / "stills"
     out.event("stage", msg="generando cuadros de vista previa")
-    paths = stills.render(t.spec, t.clips(), dest, times, t.font_dirs)
+    paths = stills.render(t.spec, t.clips(), dest, times, t.font_dirs, dense=a.completo)
     out.event("done", stills=[str(p) for p in paths] if a.json else dest)
     return 0
 
@@ -180,6 +180,7 @@ def main(argv=None):
     add("check", cmd_check, "valida el spec contra los archivos")
     p = add("stills", cmd_stills, "cuadros sueltos + hoja de contacto")
     p.add_argument("--times", help="segundos separados por coma (default: uno por escena)")
+    p.add_argument("--completo", action="store_true", help="un cuadro cada medio segundo (vista previa para revisar)")
     p.add_argument("-o", "--out", help="carpeta de salida (default: <versión>/stills)")
     p = add("render", cmd_render, "renderiza el video")
     p.add_argument("--draft", action="store_true", help="borrador rápido a 540×960")

@@ -73,7 +73,10 @@ export function Dropzone({ label, hint, files, onFiles, accept = "video/*", mult
   const input = useRef<HTMLInputElement>(null);
   const add = (list: FileList | null) => {
     if (!list) return;
-    const arr = Array.from(list).filter(f => accept === "*" || f.type.startsWith("video") || /\.(mov|mp4|m4v|mkv|webm|avi)$/i.test(f.name));
+    const okVideo = accept.includes("video"), okImage = accept.includes("image");
+    const arr = Array.from(list).filter(f => accept === "*"
+      || (okVideo && (f.type.startsWith("video") || /\.(mov|mp4|m4v|mkv|webm|avi)$/i.test(f.name)))
+      || (okImage && (f.type.startsWith("image") || /\.(jpe?g|png|webp)$/i.test(f.name))));
     onFiles(multiple ? [...files, ...arr] : arr.slice(0, 1));
   };
   return (
