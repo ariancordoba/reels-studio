@@ -54,16 +54,15 @@ esos tests se saltean solos.
 
 ## Compartir y publicar actualizaciones
 
-1. Subí el número en `VERSION` (ej. `0.2.1`).
-2. `uv run python scripts/empaquetar.py --notas "qué cambió"` → `dist/reels-studio-<versión>.zip` (sin tests ni
-   videos de ejemplo) + `dist/update.json` con el hash.
-3. Publicarlo, una de dos:
-   - **GitHub (recomendado):** repo **público**, creá un release con tag `v0.2.1` y adjuntá el zip.
-     En `update_source.txt` poné `github:usuario/repo` (una sola vez, antes de pasarles el primer zip).
-   - **Cualquier hosting:** subí el zip, poné su URL en `update.json` (`--url …`), subí `update.json` y poné su URL
-     en `update_source.txt`.
-4. Tus amigos: Ajustes → "Buscar actualizaciones" → "Actualizar ahora". La app se cierra, hace backup, se actualiza,
-   corre `uv sync` y se vuelve a abrir (si algo falla, vuelve sola a la versión anterior).
+**Publicar una versión nueva:** `PUBLICAR.bat "qué cambió"` (o `uv run python scripts/publicar.py --notas "…"`).
+Corre los tests, sube `VERSION`, compila la UI, arma el zip, revisa que no se publique nada privado (frena si
+encuentra datos personales o de clientes), hace commit + tag + push y crea el release en GitHub con el zip.
+Necesita `gh` con sesión iniciada.
+
+Las apps instaladas buscan versiones nuevas al abrir y cada 6 horas (`update_source.txt` →
+`github:ariancordoba/reels-studio`), las descargan en segundo plano y se instalan solas al cerrar la app
+(o con un clic en "Reiniciar y actualizar"). Antes de pisar nada hacen backup; si `uv sync` falla, vuelven solas
+a la versión anterior.
 
 Para la primera instalación se les pasa el zip: lo descomprimen en cualquier lado y hacen doble clic en
 `INSTALAR.bat` (copia la app a `%LOCALAPPDATA%\Programs\ReelsStudio`). `LEEME.txt` explica todo paso a paso.
