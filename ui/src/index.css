@@ -1,0 +1,73 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/* Tokens (ver PLAN §5.1): dashboard claro, tarjetas muy redondeadas, negro para acción, lima de acento. */
+@theme {
+  --color-bg: #f3f3f1;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f1ee;
+  --color-ink: #111111;
+  --color-ink-muted: #8a8a86;
+  --color-line: #ecece8;
+  --color-lime: #d4ee48;
+  --color-lime-ink: #1a1f00;
+  --color-danger: #f26b3a;
+  --color-warn-soft: #fbe8cc;
+  --color-warn-ink: #b8741a;
+  --color-ok: #3aa86b;
+
+  --radius-card: 28px;
+  --radius-sub: 20px;
+  --radius-input: 16px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04);
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  @keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+* { -webkit-tap-highlight-color: transparent; }
+::selection { background: var(--color-lime); color: var(--color-lime-ink); }
+
+/* scrollbars discretos (WebView2) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d9d9d4; border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* componentes como utilidades (Tailwind v4: sólo se puede @apply de @utility) */
+@utility card { @apply bg-surface rounded-[28px] shadow-card; }
+@utility sub { @apply rounded-[20px]; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full text-[15px] font-medium whitespace-nowrap shrink-0
+         transition-colors duration-150 ease-out select-none disabled:opacity-40 disabled:pointer-events-none; }
+@utility btn-primary { @apply btn bg-ink text-white hover:bg-black/85; }
+@utility btn-secondary { @apply btn bg-surface text-ink border border-line hover:bg-surface-muted; }
+@utility btn-lime { @apply btn bg-lime text-lime-ink hover:brightness-95; }
+@utility btn-ghost { @apply btn bg-transparent hover:bg-surface-muted; }
+@utility btn-sm { @apply h-9 px-4 text-sm; }
+@utility icon-btn { @apply inline-flex items-center justify-center size-11 rounded-full bg-surface hover:bg-surface-muted
+              transition-colors duration-150; }
+@utility input { @apply w-full h-11 px-4 rounded-[16px] bg-surface-muted border border-transparent text-[15px] outline-none
+           placeholder:text-ink-muted focus:border-ink/20 focus:bg-surface transition-colors; }
+@utility label { @apply text-[13px] text-ink-muted; }
+@utility chip { @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-surface-muted text-[13px] font-medium; }
+@utility skeleton { @apply bg-surface-muted animate-shimmer rounded-[20px]; }
+@utility h-title { @apply text-[30px] font-semibold tracking-[-0.02em] leading-tight; }
+@utility h-card { @apply text-[22px] font-semibold tracking-[-0.01em]; }
+@utility num { @apply text-[42px] font-semibold tracking-[-0.03em] leading-none; }

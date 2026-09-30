@@ -1,0 +1,5 @@
+# De dónde busca actualizaciones la app. Una de estas dos formas:
+#   github:usuario/repositorio        (releases públicos de GitHub; el zip va como asset del release)
+#   https://…/update.json             (un manifiesto: {"version", "url", "sha256", "notas"})
+# Vacío = sin actualizaciones automáticas.
+github:ariancordoba/reels-studio

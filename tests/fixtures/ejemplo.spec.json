@@ -1,0 +1,49 @@
+{
+  "format": { "w": 1080, "h": 1920, "fps": 30, "duration": 11.0 },
+  "client": "club-norte",
+  "style": {
+    "accent": "#caffbf", "text": "#ffffff",
+    "display_font": "Archivo", "display_stretch": 125, "display_weight": 900,
+    "serif_font": "Playfair",
+    "darken": 0.32, "top_gradient": 0.20, "bottom_gradient": 0.35,
+    "contrast": 1.10, "saturation": 1.18, "vignette": 0.28
+  },
+  "shots": [
+    { "clip": "crudo_IMG_9001.MOV", "t0": 0.0, "t1": 2.0, "src_in": 0.20, "speed": 1.0,
+      "zoom": [1.00, 1.10], "center": [[540, 980], [540, 900]], "transition_in": "cut" },
+    { "clip": "crudo_IMG_9001.MOV", "t0": 2.0, "t1": 4.0, "src_in": 2.30, "speed": 0.8,
+      "zoom": [1.75, 1.62], "center": [[470, 700], [610, 705]], "transition_in": "whip" },
+    { "clip": "crudo_IMG_9001.MOV", "t0": 4.0, "t1": 7.0, "src_in": 4.10, "speed": 1.0,
+      "zoom": [1.10, 1.22], "center": [[560, 900], [520, 860]], "transition_in": "whip" },
+    { "clip": "crudo_IMG_9001.MOV", "t0": 7.0, "t1": 11.0, "src_in": 7.35, "speed": 0.43,
+      "zoom": [1.42, 1.15], "center": [[540, 760], [540, 820]], "transition_in": "cut", "handheld": 3 }
+  ],
+  "camera": { "beat_punch": 0.018, "entry_punch": 0.10, "handheld": 5,
+              "shakes": [{ "t": 7.0, "amp": 26 }, { "t": 7.95, "amp": 10 }] },
+  "effects": [{ "type": "flash", "t": 7.0, "dur": 0.12, "strength": 0.85 },
+              { "type": "fade_out", "t": 10.6, "dur": 0.4 }],
+  "scenes": [
+    { "t0": 0.0, "t1": 2.0, "lines": [
+      { "kind": "display", "text": "CLUB NORTE", "size": 38, "y": 330, "delay": 0.0, "spacing": "0.12em" },
+      { "kind": "display", "text": "⚡ COPA", "size": 112, "y": 385, "delay": 0.10 },
+      { "kind": "display", "text": "*PRIMAVERA*", "size": 112, "y": 500, "delay": 0.30 } ] },
+    { "t0": 2.0, "t1": 4.0, "lines": [
+      { "kind": "display", "text": "10 DE *OCTUBRE*", "size": 104, "y": 380, "delay": 0.0 },
+      { "kind": "serif", "text": "Una jornada a puro fútbol.", "size": 60, "y": 505, "delay": 0.34 } ] },
+    { "t0": 4.0, "t1": 7.0, "lines": [
+      { "kind": "display", "text": "1.º Y 2.º AÑO", "size": 108, "y": 340, "delay": 0.0 },
+      { "kind": "display", "text": "*DE SECUNDARIA*", "size": 84, "y": 458, "delay": 0.26 },
+      { "kind": "serif", "text": "Armá tu equipo y vení a jugar.", "size": 56, "y": 568, "delay": 0.62 } ] },
+    { "t0": 7.0, "t1": 11.0, "lines": [
+      { "kind": "display", "text": "¿ESTÁN", "size": 170, "y": 300, "delay": 0.0 },
+      { "kind": "display", "text": "*LISTOS?*", "size": 170, "y": 470, "delay": 0.18 },
+      { "kind": "emoji", "text": "⚽🔥", "size": 120, "y": 655, "delay": 0.95 },
+      { "kind": "serif", "text": "Te esperamos en la cancha.", "size": 54, "y": 810, "delay": 1.10 },
+      { "kind": "display", "text": "📍 *CAMPO DE DEPORTES*", "size": 46, "y": 905, "delay": 1.45, "spacing": "0.04em" },
+      { "kind": "serif", "text": "Club Social Norte", "size": 64, "y": 968, "delay": 1.70 } ] }
+  ],
+  "footer": ["CLUB NORTE · COPA PRIMAVERA", "1.º y 2.º año de secundaria"],
+  "music": { "mode": "synth", "bpm": 120, "key": "Am", "progression": ["Am", "F", "C", "G"],
+             "build": [5.0, 6.5], "gap": [6.5, 7.0], "drop": 7.0, "whooshes": [2.0, 4.0],
+             "pops": [7.95, 8.09], "fade": 0.45, "target_lufs": -12 }
+}

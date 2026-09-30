@@ -1,0 +1,25 @@
+REELS STUDIO — cómo empezar
+===========================
+
+Qué necesitás
+  · Windows 10 u 11
+  · Una cuenta de Claude (plan Pro o Max) — cada persona usa la suya
+  · Conexión a internet la primera vez
+
+Instalar (una sola vez, ~5 minutos)
+  1. Descomprimí este zip en cualquier carpeta (por ejemplo Descargas).
+  2. Doble clic en INSTALAR.bat. Si Windows pregunta "¿Querés ejecutarlo?", elegí "Más información" → "Ejecutar de todas formas".
+  3. Cuando diga "Listo", cerrá esa ventana. Ya podés borrar la carpeta del zip.
+  4. Abrí "Reels Studio" desde el escritorio.
+
+Primera vez que la abrís
+  1. Escribí tu nombre y elegí dónde guardar los proyectos (conviene OneDrive).
+  2. Se abre "Conectar Claude": tocá Instalar (si hace falta) y después "Iniciar sesión con Claude".
+     Se abre el navegador, entrás con tu cuenta y aceptás. Listo.
+  3. Seguí la guía de la pantalla de Inicio ("Primeros pasos") o abrí Ayuda en el menú.
+
+Actualizar
+  Ajustes → "Buscar actualizaciones". La app se cierra, se actualiza y se vuelve a abrir sola.
+
+Si algo falla
+  Ayuda → "Generar diagnóstico" y mandá el archivo que queda en el escritorio.

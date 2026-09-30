@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+out/
+# videos de ejemplo: pesados, se copian aparte (ver README)
+ejemplo/*.MOV
+ejemplo/*.mp4
+/dist/
+ui/node_modules/
+# material privado (clientes, referencias de terceros, plan): sólo local
+ejemplo/
+referencia_motor_v0/
+PLAN.md
+ui_referencia.webp
+.claude/

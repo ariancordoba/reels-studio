@@ -1,0 +1,146 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body { margin:0; width:1080px; height:1920px; background:transparent; overflow:hidden; }
+  body.preview { background:#4a8fd8; }
+  #stage { position:absolute; inset:0; }
+  .scene { position:absolute; left:0; right:0; top:0; display:none; }
+  .line { position:absolute; left:0; right:0; text-align:center; white-space:nowrap; }
+  .d { font-family:var(--display); font-weight:var(--display-weight); font-stretch:var(--display-stretch);
+       letter-spacing:-0.01em; line-height:1; text-transform:uppercase; }
+  .s { font-family:var(--serif); font-weight:var(--serif-weight); line-height:1; }
+  .e { line-height:1; }
+  .ch { display:inline-block; transform-origin:50% 90%; will-change:transform; }
+  .w { color:var(--text); text-shadow:var(--shadow); }
+  .n { color:var(--accent); text-shadow:var(--shadow); }
+  .emo { font-family:var(--emoji); font-stretch:100%; font-weight:400; }
+  #footer { position:absolute; left:0; right:0; text-align:center; font-family:var(--display); font-weight:800;
+            font-stretch:112%; color:var(--text); line-height:1.35; letter-spacing:.02em;
+            text-shadow:0 2px 8px rgba(0,0,0,.45); }
+</style></head>
+<body>
+<div id="stage"></div>
+<div id="footer"></div>
+<script src="motion.js"></script>
+<script>
+// Spec inyectado por overlay.py: window.__SPEC = { format, style, scenes, footer, fonts:{display, serif, emoji} }
+// Las palabras entre *asteriscos* van en el color de acento.
+const SPEC = window.__SPEC;
+const ST = SPEC.style, FONTS = SPEC.fonts || {};
+const MAX_W = 960;  // ninguna línea más ancha (margen 60 px)
+const ANIM = {  // parámetros aprobados en el video ejemplo
+  display: { stagger: 0.032, zeta: 0.45, omega: 24, dist: 0.75, squash: 0.0022, max: 0.25, rotOdd: -28, rotEven: 22 },
+  serif:   { stagger: 0.022, zeta: 0.7, omega: 20 },
+  emoji:   { stagger: 0.14, zeta: 0.38, omega: 22 },
+};
+
+(function fonts() {
+  const css = [];
+  const face = (fam, url) => url && css.push(
+    `@font-face{font-family:'${fam}';src:url('${url}');font-weight:100 900;font-stretch:50% 200%;}`);
+  face('DisplayX', FONTS.display); face('SerifX', FONTS.serif); face('EmojiX', FONTS.emoji);
+  const st = document.createElement('style'); st.textContent = css.join('\n'); document.head.appendChild(st);
+  const r = document.documentElement.style;
+  r.setProperty('--display', `'DisplayX','${ST.display_font}'`);
+  r.setProperty('--serif', `'SerifX','${ST.serif_font}',serif`);
+  r.setProperty('--emoji', `'EmojiX','Noto Color Emoji','Segoe UI Emoji','Apple Color Emoji'`);
+  r.setProperty('--display-weight', ST.display_weight);
+  r.setProperty('--display-stretch', ST.display_stretch + '%');
+  r.setProperty('--serif-weight', ST.serif_weight);
+  r.setProperty('--text', ST.text); r.setProperty('--accent', ST.accent); r.setProperty('--shadow', ST.text_shadow);
+})();
+
+const EMOJI = /\p{Extended_Pictographic}/u;
+const seg = new Intl.Segmenter('es', { granularity: 'grapheme' });
+const KIND = { display: 'd', serif: 's', emoji: 'e' };
+
+const stage = document.getElementById('stage');
+const built = SPEC.scenes.map(sc => {
+  const el = document.createElement('div'); el.className = 'scene'; stage.appendChild(el);
+  const lines = sc.lines.map(L => {
+    const ln = document.createElement('div'); ln.className = 'line ' + KIND[L.kind];
+    ln.style.fontSize = L.size + 'px'; ln.style.top = L.y + 'px';
+    if (L.spacing) ln.style.letterSpacing = L.spacing;
+    let accent = false; const chars = [];
+    for (const { segment: c } of seg.segment(L.text)) {
+      if (c === '*') { accent = !accent; continue; }
+      const sp = document.createElement('span');
+      const isEmo = EMOJI.test(c);
+      sp.className = 'ch ' + (accent ? 'n' : 'w') + (isEmo ? ' emo' : '');
+      if (L.color && !accent) sp.style.color = L.color;
+      sp.textContent = c === ' ' ? ' ' : c;
+      ln.appendChild(sp); if (c !== ' ') chars.push({ sp, isEmo });
+    }
+    el.appendChild(ln);
+    return { L, chars };
+  });
+  return { sc, el, lines };
+});
+
+const foot = document.getElementById('footer');
+const F = SPEC.footer || { lines: [] };
+foot.style.top = (F.y ?? 1700) + 'px'; foot.style.fontSize = (F.size ?? 31) + 'px';
+for (const [i, txt] of (F.lines || []).entries()) {
+  if (i) foot.appendChild(document.createElement('br'));
+  foot.appendChild(document.createTextNode(txt));
+}
+
+// Reveal por letra: display cae girando y rebota, serif sube desde alturas distintas, emoji hace pop con squash.
+function render(t) {
+  for (const b of built) {
+    const on = t >= b.sc.t0 && t < b.sc.t1;
+    b.el.style.display = on ? 'block' : 'none';
+    if (!on) continue;
+    const lt = t - b.sc.t0;
+    for (const { L, chars } of b.lines) {
+      chars.forEach(({ sp }, i) => {
+        if (L.kind === 'display') {
+          const A = ANIM.display;
+          const m = M.letterDrop(lt, L.delay, i, { ...A, dist: L.size * A.dist });
+          const rot = (1 - m.k) * (i % 2 ? A.rotOdd : A.rotEven);
+          sp.style.opacity = m.op;
+          sp.style.transform = `translateY(${-m.y}px) rotate(${rot}deg) scale(${m.sx},${m.sy})`;
+        } else if (L.kind === 'serif') {
+          const A = ANIM.serif;
+          const k = M.spring(lt - L.delay - i * A.stagger, A.zeta, A.omega);
+          const off = ((i * 37) % 5 - 2) * 0.18 * L.size;  // alturas distintas, se alinean al asentar
+          sp.style.opacity = M.clamp(k * 2);
+          sp.style.transform = `translateY(${(1 - k) * (L.size * 0.55 + off)}px)`;
+        } else {
+          const A = ANIM.emoji, tau = lt - L.delay - i * A.stagger;
+          const k = M.spring(tau, A.zeta, A.omega), v = M.springVel(tau, A.zeta, A.omega);
+          const sq = M.clamp(Math.abs(v) * 0.004, 0, 0.3);
+          sp.style.opacity = M.clamp(k * 3);
+          sp.style.transform = `scale(${k * (1 + sq * 0.5)},${k * (1 - sq * 0.4)}) rotate(${(1 - k) * -40}deg)`;
+        }
+      });
+    }
+  }
+  const f = M.popIn(t, F.delay ?? 0.25, { rise: 24 });  // el pie entra una vez y se queda
+  foot.style.opacity = f.op; foot.style.transform = `translateY(${f.dy}px)`;
+}
+
+function fit() {  // achica cualquier línea que pase de MAX_W (medida en el estado final)
+  render(1e6);
+  for (const b of built) {
+    b.el.style.display = 'block';
+    for (const ln of b.el.children) {
+      const inner = Array.from(ln.children).reduce((a, c) => a + c.getBoundingClientRect().width, 0);
+      if (inner > MAX_W) ln.style.fontSize = (parseFloat(ln.style.fontSize) * MAX_W / inner) + 'px';
+    }
+    b.el.style.display = 'none';
+  }
+}
+
+window.__seek = t => { render(t); return true; };
+window.__ready = document.fonts.ready
+  .then(() => Promise.all([
+    document.fonts.load(`${ST.display_weight} 100px DisplayX`),
+    document.fonts.load(`${ST.serif_weight} 60px SerifX`),
+    document.fonts.load(`100px EmojiX`),
+  ]))
+  .then(() => { fit(); render(0); return true; });
+const q = new URLSearchParams(location.search);
+if (q.has('preview')) document.body.classList.add('preview');
+</script>
+</body></html>
