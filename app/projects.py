@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import time
@@ -33,10 +34,23 @@ def read_json(p: Path, default=None):
         return default
 
 
+def retry(fn, tries: int = 8):
+    """Escrituras en la carpeta sincronizada: OneDrive/Drive pueden bloquearla un instante."""
+    for i in range(tries):
+        try:
+            return fn()
+        except OSError:
+            if i == tries - 1:
+                raise
+            time.sleep(min(0.5 * (i + 1), 3))
+
+
 def write_json(p: Path, data):
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(p)
+    def _w():
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, p)
+    retry(_w)
 
 
 # ── clientes
@@ -95,28 +109,62 @@ def save_meta(project: Path, **changes) -> dict:
     return m
 
 
+def safe_transfer(src: Path, dst: Path, move: bool, tries: int = 8):
+    """Copiar/mover a la carpeta de datos aunque OneDrive/Drive la esté sincronizando.
+
+    Al poner archivos nuevos, OneDrive bloquea la carpeta un instante: os.rename falla y la copia nativa de
+    Windows (CopyFile2, la que usa shutil.copy2) a veces devuelve "no se encuentra el archivo". Se reintenta y,
+    si sigue, se copia leyendo y escribiendo a mano.
+    """
+    src, dst = Path(src), Path(dst)
+    last = None
+    for i in range(tries):
+        try:
+            if move:
+                try:
+                    os.replace(src, dst)  # mismo disco: instantáneo
+                    return
+                except OSError:
+                    pass
+            tmp = dst.with_name(dst.name + ".parcial")
+            with open(src, "rb") as fi, open(tmp, "wb") as fo:
+                shutil.copyfileobj(fi, fo, 8 << 20)
+            os.replace(tmp, dst)
+            if move:
+                src.unlink(missing_ok=True)
+            return
+        except OSError as e:
+            last = e
+            time.sleep(min(0.5 * (i + 1), 3))
+    raise OSError(f"no pude guardar «{src.name}» en la carpeta de datos (¿OneDrive/Drive sincronizando o sin espacio?): {last}")
+
+
 def create_project(titulo: str, cliente: str, crudos: list[Path], referencias: list[Path], instrucciones: str,
                    duracion: float | None = None, move: bool = False) -> Path:
     base = projects_dir() / f"{date.today():%Y-%m-%d}-{slugify(titulo)}"
     p, n = base, 2
     while p.exists():
         p, n = base.with_name(f"{base.name}-{n}"), n + 1
-    for sub in ("entrada/crudos", "entrada/referencias", "analisis", "versiones"):
-        (p / sub).mkdir(parents=True)
-    op = shutil.move if move else shutil.copy2
-    for f in crudos:
-        op(str(f), p / "entrada" / "crudos" / Path(f).name)
-    for f in referencias:
-        op(str(f), p / "entrada" / "referencias" / Path(f).name)
-    txt = instrucciones.strip()
-    if duracion:
-        txt += f"\n\nDuración deseada: {duracion:g} s."
-    (p / "entrada" / "instrucciones.md").write_text(txt + "\n", encoding="utf-8")
-    shutil.copy2(TEMPLATE, p / "CLAUDE.md")
-    snapshot_client(p, cliente)
-    save_meta(p, titulo=titulo, cliente=cliente, creado=datetime.now().isoformat(timespec="seconds"),
-              version_actual=None, session_id=None, etapa="crudos", duracion=duracion, pendiente=None,
-              prioridad="media", entrega=None)
+    try:
+        for sub in ("entrada/crudos", "entrada/referencias", "analisis", "versiones"):
+            (p / sub).mkdir(parents=True)
+        for f in crudos:
+            safe_transfer(Path(f), p / "entrada" / "crudos" / Path(f).name, move)
+        for f in referencias:
+            safe_transfer(Path(f), p / "entrada" / "referencias" / Path(f).name, move)
+        txt = instrucciones.strip()
+        if duracion:
+            txt += f"\n\nDuración deseada: {duracion:g} s."
+        retry(lambda: (p / "entrada" / "instrucciones.md").write_text(txt + "\n", encoding="utf-8"))
+        safe_transfer(TEMPLATE, p / "CLAUDE.md", move=False)
+        snapshot_client(p, cliente)
+        save_meta(p, titulo=titulo, cliente=cliente, creado=datetime.now().isoformat(timespec="seconds"),
+                  version_actual=None, session_id=None, etapa="crudos", duracion=duracion, pendiente=None,
+                  prioridad="media", entrega=None)
+    except Exception:
+        # todo o nada: que no quede un proyecto a medio crear (invisible en la app)
+        shutil.rmtree(p, ignore_errors=True)
+        raise
     return p
 
 

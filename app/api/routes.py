@@ -245,9 +245,14 @@ async def post_proyecto(titulo: str = Form(...), cliente: str = Form(...), instr
             with open(dst, "wb") as f:
                 shutil.copyfileobj(up.file, f, 8 << 20)
             saved[kind].append(dst)
-    p = projects.create_project(titulo, cliente, saved["crudos"], saved["referencias"], instrucciones, duracion,
-                                move=True)
-    shutil.rmtree(tmp, ignore_errors=True)
+    try:
+        # copiar (no mover): si algo falla, el proyecto a medio crear se borra y nada se pierde
+        p = projects.create_project(titulo, cliente, saved["crudos"], saved["referencias"], instrucciones, duracion,
+                                    move=False)
+    except OSError as e:
+        raise HTTPException(500, f"No se pudo crear el proyecto: {e}. Probá de nuevo en unos segundos.") from e
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     if plantilla:
         t = projects.read_json(projects.templates_dir() / f"{Path(plantilla).name}.json")
         if t:
