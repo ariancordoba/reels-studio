@@ -116,7 +116,8 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
             <div className="col-span-2"><Field label="Nombre del video"><input className="input" placeholder="Ej: Lanzamiento colección otoño" value={titulo} onChange={e => setTitulo(e.target.value)} /></Field></div>
             {!pl && <Field label="Duración (opcional)"><input className="input font-mono" placeholder="11 s" inputMode="decimal" value={duracion} onChange={e => setDuracion(e.target.value.replace(/[^0-9.]/g, ""))} /></Field>}
           </div>
-          <Dropzone label="Subí tus crudos" hint="Arrastrá los videos o hacé clic · .mov, .mp4 · mejor verticales, con buena luz" files={crudos} onFiles={setCrudos} icon={<Film {...ICON} />} />
+          <Dropzone label="Subí tus crudos: videos y fotos" hint="Arrastrá o hacé clic · .mov, .mp4, .jpg, .png, .heic · se pueden combinar" accept="video/*,image/*,.heic,.heif"
+            files={crudos} onFiles={setCrudos} icon={<Film {...ICON} />} />
         </Step>
 
         <Step n={3} title="¿Cómo lo armamos?">

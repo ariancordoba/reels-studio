@@ -16,16 +16,19 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from . import photos
+from .photos import PHOTO_EXT
 from .probe import NO_WINDOW, ffmpeg_exe, probe
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
-IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+IMAGE_EXT = PHOTO_EXT
 
 
 def shrink_image(path: Path, max_side: int = 1600) -> Path:
     """Imágenes de referencia: a lo sumo 1600 px y en JPG (se ven igual y Claude gasta menos al mirarlas)."""
-    img = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
-    if img is None:
+    try:
+        img = photos.load(path)  # derecha (EXIF) y también HEIC
+    except Exception:  # noqa: BLE001
         return path
     h, w = img.shape[:2]
     k = min(1.0, max_side / max(h, w))
@@ -162,6 +165,22 @@ def tempo(path: Path) -> dict | None:
             "drop_estimado": round(drop, 2), "onset_medio": round(float(onset.mean()), 3)}
 
 
+def analyze_photo(path: Path, out: Path) -> dict:
+    """Foto cruda: una miniatura (Claude la mira) y su orientación."""
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("*.jpg"):
+        old.unlink()
+    img = photos.load(path)
+    h, w = img.shape[:2]
+    k = 540 / max(h, w)
+    thumb = cv2.resize(img, (int(w * k), int(h * k)), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", thumb, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    buf.tofile(str(out / "hoja_01.jpg"))
+    res = {"archivo": path.name, "tipo": "foto", "resolucion": [w, h], "vertical": h > w, "hojas": ["hoja_01.jpg"]}
+    (out / "info.json").write_text(json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
+    return res
+
+
 def analyze_video(path: Path, out: Path, kind: str) -> dict:
     """kind: 'referencia' | 'crudo'."""
     out.mkdir(parents=True, exist_ok=True)
@@ -209,7 +228,20 @@ def summary_md(results: list[dict], images: list[str] | None = None) -> str:
         L += ["## Imágenes de referencia (estilo que ella quiere)",
               "Miralas con Read: tipografías, colores, disposición de textos, tono. Imitá ese estilo.", ""]
         L += [f"- `{i}`" for i in images] + [""]
+    fotos = [r for r in results if r["tipo"] == "foto"]
+    if fotos:
+        L += ["## Fotos crudas",
+              "Usalas como planos (`clip` = nombre del archivo, `src_in` 0, `speed` 1). Una foto no se mueve sola: "
+              "dale **siempre** movimiento de cámara (zoom de 1.0 a ~1.12, o al revés, y/o `center` que se desplace "
+              "dentro del margen que permite el zoom). Planos de foto más cortos que los de video (1–2.5 s).", ""]
+        for r in fotos:
+            L.append(f"- `{r['archivo']}` · {r['resolucion'][0]}×{r['resolucion'][1]}"
+                     f"{' (vertical)' if r['vertical'] else ' (horizontal: se recorta al centro)'} · "
+                     f"miniatura `analisis/{slug(r['archivo'])}_foto/hoja_01.jpg`")
+        L.append("")
     for r in results:
+        if r["tipo"] == "foto":
+            continue
         base = f"analisis/{slug(r['archivo'])}"
         L.append(f"## {r['tipo'].capitalize()}: `{r['archivo']}`")
         L.append(f"- {r['duracion']:.2f} s · {r['fps']:g} fps · {r['resolucion'][0]}×{r['resolucion'][1]}"
@@ -236,11 +268,13 @@ def analyze_project(project: Path, progress=None) -> list[dict]:
     entrada = project / "entrada"
     items = [(p, "referencia") for p in sorted((entrada / "referencias").glob("*")) if p.suffix.lower() in VIDEO_EXT]
     items += [(p, "crudo") for p in sorted((entrada / "crudos").glob("*")) if p.suffix.lower() in VIDEO_EXT]
+    items += [(p, "foto") for p in sorted((entrada / "crudos").glob("*")) if p.suffix.lower() in PHOTO_EXT]
     out = project / "analisis"
     results = []
     for i, (p, kind) in enumerate(items):
         progress and progress(i, len(items), p.name)
-        results.append(analyze_video(p, out / slug(p.name), kind))
+        dest = out / (slug(p.name) + ("_foto" if kind == "foto" else ""))
+        results.append(analyze_photo(p, dest) if kind == "foto" else analyze_video(p, dest, kind))
     progress and progress(len(items), len(items), "")
     images = [shrink_image(p) for p in sorted((entrada / "referencias").glob("*")) if p.suffix.lower() in IMAGE_EXT]
     rel = [p.relative_to(project).as_posix() for p in images]

@@ -48,6 +48,16 @@ class Proxy:
         tmp = self.dir.with_name(self.dir.name + ".tmp")
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
+        if self.info.is_photo:  # un solo cuadro: el movimiento lo pone la cámara del plano
+            from . import photos
+
+            img = photos.cover(photos.load(self.clip), self.w, self.h)
+            ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            buf.tofile(str(tmp / "00001.jpg"))
+            shutil.rmtree(self.dir, ignore_errors=True)
+            tmp.rename(self.dir)
+            (self.dir / "done").write_text("1")
+            return
         vf = (f"scale={self.w}:{self.h}:force_original_aspect_ratio=increase:flags=lanczos,"
               f"crop={self.w}:{self.h},setsar=1")
         cmd = [ffmpeg_exe(), "-v", "error", "-y", "-i", str(self.clip), "-vf", vf, "-fps_mode", "passthrough",
@@ -71,7 +81,7 @@ class Proxy:
         if f is None:
             if len(self._frames) > 48:
                 self._frames.clear()
-            img = cv2.imread(str(self.dir / f"{i:05d}.jpg"), cv2.IMREAD_COLOR)
+            img = cv2.imdecode(np.fromfile(str(self.dir / f"{i:05d}.jpg"), np.uint8), cv2.IMREAD_COLOR)
             f = self._frames[i] = img.astype(np.float32) / 255.0
         return f
 

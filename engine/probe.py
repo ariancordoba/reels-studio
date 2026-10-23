@@ -38,6 +38,7 @@ class ClipInfo:
     height: int
     rotation: float
     has_audio: bool
+    is_photo: bool = False
 
 
 @lru_cache(maxsize=64)
@@ -65,4 +66,12 @@ def _probe(path: str, _mtime: float) -> ClipInfo:
 
 def probe(path: str | Path) -> ClipInfo:
     p = str(Path(path).resolve())
+    from . import photos
+
+    if photos.is_photo(p):
+        try:
+            w, h = photos.size(p)
+        except Exception as e:  # noqa: BLE001 — archivo dañado o formato no soportado
+            raise ValueError(f"no pude abrir la foto '{Path(p).name}': {e}") from e
+        return ClipInfo(p, photos.PHOTO_DURATION, photos.PHOTO_FPS, w, h, 0.0, False, True)
     return _probe(p, os.path.getmtime(p))

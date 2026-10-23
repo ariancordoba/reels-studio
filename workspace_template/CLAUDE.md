@@ -9,7 +9,7 @@ convierte en video. Nunca escribís código ni tocás el motor: sólo specs y no
 | ruta | qué es |
 |---|---|
 | `entrada/instrucciones.md` | lo que ella quiere: guion, textos, datos (fecha, lugar), duración, tono |
-| `entrada/crudos/` | videos crudos del cliente (el material que se edita) |
+| `entrada/crudos/` | videos crudos **y fotos** del cliente (el material que se edita). Video y foto se pueden combinar en el mismo reel |
 | `entrada/referencias/` | video(s) de referencia: el **estilo** a imitar (ritmo de cortes, cantidad de texto por plano, animación). También puede haber **imágenes** (capturas de posteos o reels que le gustan): miralas con Read e imitá tipografía, colores, cantidad de texto y disposición |
 | `entrada/adjuntos/` | imágenes que adjuntó en un pedido de cambio ("así quiero el título"): el pedido te dice cuáles mirar |
 | `analisis/resumen.md` | **empezá por acá**: duración, cortes y tempo de la referencia, movimiento por segundo de cada crudo |
@@ -143,6 +143,10 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
 - **Cortes sobre la grilla de beats** (60/bpm s; a 120 BPM cada 0.5 s). `reels check` avisa si no.
   Los cortes de la escena de texto y del plano conviene que coincidan.
 - `src_in + (t1 - t0) * speed` no puede pasar la duración del crudo.
+- **Fotos** (`.jpg`, `.png`, `.heic`…): son planos como cualquier otro (`clip` = nombre del archivo, `src_in` 0,
+  `speed` 1). Una foto no se mueve sola: dale **siempre** movimiento de cámara — zoom de 1.0 a ~1.12 (o al revés) y,
+  si querés, `center` que se desplace dentro del margen del zoom. Mejor planos de 1–2.5 s y alternar con video si hay.
+  Elegí el encuadre mirando la miniatura en `analisis/<foto>_foto/hoja_01.jpg` (que no queden caras cortadas).
 - Crudo horizontal: se recorta al centro para 9:16; usá `center` para elegir qué parte se ve.
   `center` está en coordenadas del crudo ya ajustado a 1080×1920. Con zoom 1.0 el centro tiene que ser
   (540, 960) o se ven bordes espejados: con zoom z el centro puede moverse ±540·(1−1/z) en x y ±960·(1−1/z) en y.

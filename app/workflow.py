@@ -211,7 +211,7 @@ def quick_version(project: Path, template_id: str, texts: dict[str, str] | None 
     if not t:
         return {"ok": False, "message": "No encuentro esa plantilla."}
     with projects.project_lock(project, "armado automático"):
-        clips = sorted(p for p in (project / "entrada" / "crudos").iterdir() if p.suffix.lower() in analyze.VIDEO_EXT)
+        clips = sorted(p for p in (project / "entrada" / "crudos").iterdir() if p.suffix.lower() in analyze.VIDEO_EXT | analyze.PHOTO_EXT)
         if not clips:
             return {"ok": False, "message": "El proyecto no tiene crudos."}
         emit({"type": "status", "text": "Buscando los mejores momentos de los crudos…"})

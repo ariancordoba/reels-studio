@@ -6,7 +6,7 @@ export const ICON = { size: 20, strokeWidth: 1.75 } as const;
 /** Imágenes de un pegado (Ctrl+V de una captura) o de un arrastre. Las pegadas vienen como "image.png": se renombran. */
 export function imagesFrom(dt: DataTransfer | null): File[] {
   if (!dt) return [];
-  const files = Array.from(dt.files ?? []).filter(f => f.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(f.name));
+  const files = Array.from(dt.files ?? []).filter(f => f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
   const stamp = Date.now();
   return files.map((f, i) => (f.name === "image.png" || !f.name)
     ? new File([f], `pegada-${stamp}-${i}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type })
@@ -86,7 +86,7 @@ export function Dropzone({ label, hint, files, onFiles, accept = "video/*", mult
     const okVideo = accept.includes("video"), okImage = accept.includes("image");
     const arr = Array.from(list).filter(f => accept === "*"
       || (okVideo && (f.type.startsWith("video") || /\.(mov|mp4|m4v|mkv|webm|avi)$/i.test(f.name)))
-      || (okImage && (f.type.startsWith("image") || /\.(jpe?g|png|webp)$/i.test(f.name))));
+      || (okImage && (f.type.startsWith("image") || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name))));
     onFiles(multiple ? [...files, ...arr] : arr.slice(0, 1));
   };
   return (

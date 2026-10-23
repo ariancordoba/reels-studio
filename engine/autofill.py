@@ -68,15 +68,17 @@ def fill(template: dict, clips: list[Path], texts: dict[str, str] | None = None,
     spec = copy.deepcopy(template)
     W, H = spec["format"].get("w", 1080), spec["format"].get("h", 1920)
     infos = {c.name: probe(c) for c in clips}
-    curves = {c.name: interest_curve(c, RATE) for c in clips}
-    durations = {n: i.duration for n, i in infos.items()}
+    # una foto no tiene "momentos": interés parejo en un tramo corto (lo ya usado se penaliza igual)
+    curves = {c.name: ((np.arange(40) / RATE, np.full(40, 0.6)) if infos[c.name].is_photo else interest_curve(c, RATE))
+              for c in clips}
+    durations = {n: (10.0 if i.is_photo else i.duration) for n, i in infos.items()}
 
     shots = spec["shots"]
     for s in shots:  # cámara lenta limpia sólo con crudos de 50–60 fps
         s.setdefault("speed", 1.0)
     needs = [(s["t1"] - s["t0"]) * s["speed"] for s in shots]
     picks = pick_windows(needs, curves, durations)
-    for s, (clip, start) in zip(shots, picks):
+    for k, (s, (clip, start)) in enumerate(zip(shots, picks)):
         if s["speed"] < 0.7 and infos[clip].fps < 48:
             s["speed"] = 0.85
         s["clip"] = clip
@@ -85,6 +87,11 @@ def fill(template: dict, clips: list[Path], texts: dict[str, str] | None = None,
         if s["src_in"] + need > durations[clip]:  # clip corto: bajar la velocidad para que alcance
             s["speed"] = max(0.3, round((durations[clip] - 0.05) / (s["t1"] - s["t0"]), 3))
             s["src_in"] = 0.0
+        if infos[clip].is_photo:  # una foto quieta se ve muerta: siempre con movimiento (Ken Burns)
+            s["src_in"], s["speed"] = 0.0, 1.0
+            z = s.get("zoom", [1.0, 1.0])
+            if abs(z[0] - z[1]) < 0.04:
+                s["zoom"] = [1.0, 1.12] if k % 2 == 0 else [1.12, 1.0]
         zoom = s.get("zoom", [1.0, 1.0])
         # los encuadres de la plantilla eran para otro crudo: se centran (con el mismo recorrido relativo)
         cen = s.get("center", [[W / 2, H / 2], [W / 2, H / 2]])
