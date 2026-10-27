@@ -55,7 +55,7 @@ def write_json(p: Path, data):
 
 # ── clientes
 CLIENT_DEFAULTS = {
-    "nombre": "", "accent": "#caffbf", "text": "#ffffff", "display_font": "Archivo", "serif_font": "Playfair",
+    "nombre": "", "accent": "#caffbf", "text": "#ffffff", "display_font": "", "serif_font": "",  # vacío = que Claude elija según el rubro
     "footer": [], "darken": 0.32, "logo": None, "notas": "",
 }
 

@@ -263,7 +263,65 @@ def _style(spec: dict) -> dict:
     return spec.setdefault("style", {})
 
 
+# variedad sin Claude: cada clic pasa a la siguiente opción (en orden, así nunca repite la anterior)
+GENRE_CYCLE = ["pop", "house", "reggaeton", "funk", "lofi", "trap", "corporativo", "cinematico", "ambient"]
+ANIM_CYCLE = [("caida", "subida"), ("zoom", "fade"), ("palabras", "maquina"), ("deslizar", "fade"),
+              ("pop", "palabras"), ("glitch", "maquina"), ("rebote", "subida"), ("desenfoque", "desenfoque"),
+              ("rotar", "fade"), ("ola", "pop")]
+FONT_CYCLE = [("Archivo", "Playfair"), ("Anton", "InstrumentSerif"), ("Montserrat", "DMSerifDisplay"),
+              ("BebasNeue", "Fraunces"), ("Unbounded", "DMSans"), ("Poppins", "Playfair"), ("Oswald", "Caveat"),
+              ("Syne", "InstrumentSerif"), ("Bricolage", "Fraunces"), ("AbrilFatface", "Montserrat")]
+LOOK_CYCLE = ["normal", "caja", "resaltado", "sombra", "contorno", "neon"]
+
+
+def _next(cycle, current):
+    return cycle[(cycle.index(current) + 1) % len(cycle)] if current in cycle else cycle[0]
+
+
+def _other_music(s: dict):
+    m = s.get("music") or {}
+    if m.get("mode") != "synth":
+        s["music"] = {"mode": "synth", "genre": "pop"}
+        return
+    m["genre"] = _next(GENRE_CYCLE, m.get("genre", "house"))
+    m.pop("bpm", None)          # el típico del género nuevo
+    m.pop("progression", None)
+    if m["genre"] in ("lofi", "ambient"):
+        m.pop("gap", None)
+
+
+def _other_anim(s: dict):
+    st = _style(s)
+    cur = (st.get("display_anim", "caida"), st.get("serif_anim", "subida"))
+    st["display_anim"], st["serif_anim"] = _next(ANIM_CYCLE, cur)
+    for sc in s.get("scenes", []):
+        for ln in sc["lines"]:
+            ln.pop("anim", None)  # que se note el cambio en todo el video
+
+
+def _other_font(s: dict):
+    st = _style(s)
+    cur = (st.get("display_font", "Archivo"), st.get("serif_font", "Playfair"))
+    st["display_font"], st["serif_font"] = _next(FONT_CYCLE, cur)
+    st["display_stretch"] = 125 if st["display_font"] == "Archivo" else 100
+    for sc in s.get("scenes", []):
+        for ln in sc["lines"]:
+            ln.pop("font", None)
+
+
+def _other_look(s: dict):
+    st = _style(s)
+    st["look"] = _next(LOOK_CYCLE, st.get("look", "normal"))
+    for sc in s.get("scenes", []):
+        for ln in sc["lines"]:
+            ln.pop("look", None)
+
+
 QUICK = {
+    "otra_musica": ("Otra música", _other_music),
+    "otra_animacion": ("Otra animación de texto", _other_anim),
+    "otra_letra": ("Otra tipografía", _other_font),
+    "otro_estilo": ("Otro estilo de texto", _other_look),
     "acento_claro": ("Color de acento más claro",
                      lambda s: _style(s).update(accent=_hex_shift(_style(s).get("accent", "#caffbf"), 0.08))),
     "acento_oscuro": ("Color de acento más oscuro",
@@ -290,12 +348,31 @@ def quick_adjust(project: Path, kind: str) -> dict:
     label, fn = QUICK[kind]
     spec = json.loads((cur / "spec.json").read_text(encoding="utf-8"))
     fn(spec)
-    res = edit_version(project, spec, f"Ajuste rápido: {label.lower()}")
+    what = _describe(kind, spec)
+    res = edit_version(project, spec, f"Ajuste rápido: {label.lower()}{what}")
     if res["ok"]:
         vdir = project / "versiones" / res["version"]
-        (vdir / "resumen.txt").write_text(f"Ajuste rápido (sin Claude): {label.lower()}.\n", encoding="utf-8")
-        res["message"] = f"Listo: {label.lower()}. Lo hice sin Claude, en la versión {res['version']}."
+        (vdir / "resumen.txt").write_text(f"Ajuste rápido (sin Claude): {label.lower()}{what}.\n", encoding="utf-8")
+        res["message"] = (f"Listo: {label.lower()}{what}. Lo hice sin Claude, en la versión {res['version']}."
+                          + (" ¿No te gusta? Tocá de nuevo para probar otra." if kind.startswith("otr") else ""))
     return res
+
+
+GENRE_NAMES = {"house": "house", "pop": "pop", "trap": "trap", "reggaeton": "reggaetón", "lofi": "lo-fi",
+               "cinematico": "cinematográfica", "corporativo": "corporativa", "funk": "funk", "ambient": "ambient"}
+
+
+def _describe(kind: str, spec: dict) -> str:
+    st = spec.get("style", {})
+    if kind == "otra_musica":
+        return f" (ahora suena {GENRE_NAMES.get(spec['music'].get('genre'), spec['music'].get('genre'))})"
+    if kind == "otra_animacion":
+        return f" (títulos: {st.get('display_anim')}, frases: {st.get('serif_anim')})"
+    if kind == "otra_letra":
+        return f" (ahora {st.get('display_font')} + {st.get('serif_font')})"
+    if kind == "otro_estilo":
+        return f" (estilo «{st.get('look')}»)"
+    return ""
 
 
 # ── aprender un estilo de una referencia (Claude una sola vez → plantilla reutilizable)

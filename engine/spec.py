@@ -32,6 +32,16 @@ class Format(_M):
     duration: float = Field(gt=0, le=180)
 
 
+# animaciones de entrada del texto (ver CLAUDE.md para qué transmite cada una)
+TextAnim = Literal["caida", "subida", "pop", "maquina", "fade", "deslizar", "zoom", "palabras", "rebote", "ola",
+                   "glitch", "desenfoque", "rotar"]
+TextOut = Literal["corte", "fade", "subir", "achicar", "desenfoque", "deslizar"]
+TextLook = Literal["normal", "caja", "contorno", "resaltado", "neon", "sombra"]
+Genre = Literal["house", "pop", "trap", "reggaeton", "lofi", "cinematico", "corporativo", "funk", "ambient"]
+SfxType = Literal["whoosh", "whoosh_corto", "swipe", "pop", "click", "tick", "glitch", "camara", "ding", "notificacion",
+                  "impacto", "boom", "riser", "reversa", "caja_registradora", "burbuja"]
+
+
 class Style(_M):
     accent: str = "#caffbf"
     text: str = "#ffffff"
@@ -41,6 +51,15 @@ class Style(_M):
     display_weight: int = 900
     serif_font: str = "Playfair"
     serif_weight: int = 400
+    script_font: str = "Caveat"          # líneas "script" (manuscritas)
+    display_uppercase: bool = True       # los títulos van en mayúsculas
+    # animación por defecto de cada tipo de línea (cada línea puede pisarla con "anim")
+    display_anim: TextAnim = "caida"
+    serif_anim: TextAnim = "subida"
+    script_anim: TextAnim = "desenfoque"
+    text_out: TextOut = "corte"          # cómo se van los textos al terminar la escena
+    look: TextLook = "normal"            # estilo visual por defecto de los textos
+    box_color: str | None = None         # fondo del look "caja" (default: el acento)
     darken: float = Field(0.32, ge=0, le=0.9)
     top_gradient: float = Field(0.20, ge=0, le=1)
     bottom_gradient: float = Field(0.35, ge=0, le=1)
@@ -96,19 +115,25 @@ class Effect(_M):
 
 
 class Line(_M):
-    kind: Literal["display", "serif", "emoji"]
+    kind: Literal["display", "serif", "script", "emoji"]
     text: str = Field(min_length=1)
     size: float = Field(gt=4, le=400)
     y: float
     delay: float = 0.0
     spacing: str | None = None
     color: str | None = None
+    anim: TextAnim | None = None      # entrada (default: la del tipo de línea en style)
+    out: TextOut | None = None        # salida al terminar la escena (default: style.text_out)
+    look: TextLook | None = None      # estilo visual (default: style.look)
+    align: Literal["centro", "izquierda", "derecha"] = "centro"
+    font: str | None = None           # tipografía sólo para esta línea
 
 
 class Scene(_M):
     t0: float
     t1: float
     lines: list[Line]
+    out: TextOut | None = None        # salida de toda la escena (pisa style.text_out)
 
     @model_validator(mode="after")
     def _t(self):
@@ -126,9 +151,10 @@ class Footer(_M):
 
 class MusicSynth(_M):
     mode: Literal["synth"]
-    bpm: float = Field(120, ge=60, le=200)
+    genre: Genre = "house"
+    bpm: float | None = Field(None, ge=60, le=200)  # None = el típico del género
     key: str = "Am"
-    progression: list[str] = ["Am", "F", "C", "G"]
+    progression: list[str] | None = None  # None = una progresión típica del género
     build: tuple[float, float] | None = None
     gap: tuple[float, float] | None = None
     drop: float | None = None
@@ -155,6 +181,12 @@ class MusicNone(_M):
 Music = Annotated[Union[MusicSynth, MusicFile, MusicNone], Field(discriminator="mode")]
 
 
+class Sfx(_M):
+    t: float = Field(ge=0)
+    type: SfxType
+    gain: float = Field(1.0, ge=0, le=2)
+
+
 class Spec(_M):
     format: Format
     client: str = ""
@@ -165,6 +197,8 @@ class Spec(_M):
     scenes: list[Scene] = []
     footer: Footer = Footer()
     music: Music = MusicNone(mode="none")
+    sfx: list[Sfx] = []               # efectos de sonido puntuales
+    auto_sfx: bool = True             # efectos automáticos según cortes y animaciones de texto
 
     @field_validator("footer", mode="before")
     @classmethod
@@ -190,7 +224,10 @@ class Spec(_M):
     # ── utilidades
     @property
     def bpm(self) -> float:
-        return self.music.bpm if isinstance(self.music, MusicSynth) else 120.0
+        if isinstance(self.music, MusicSynth):
+            from .music import GENRES  # import diferido: music importa spec
+            return self.music.bpm or GENRES[self.music.genre]["bpm"]
+        return 120.0
 
     def shot_at(self, t: float) -> Shot:
         for s in self.shots:

@@ -4,9 +4,25 @@ import { api, useStore, type Cliente } from "../api";
 import { Empty, Field, cx } from "../components/ui";
 import { ClientAvatar, go } from "../App";
 
-const BUILTIN = ["Archivo", "Playfair"];
+const BUILTIN_FALLBACK = ["Archivo", "Playfair"];
+
+/** Tipografías incluidas (catálogo del motor), cargadas para verlas con su propia letra. */
+function useCatalog(): string[] {
+  const [names, setNames] = useState<string[]>(BUILTIN_FALLBACK);
+  useEffect(() => {
+    fetch("/api/fuentes").then(r => r.json()).then((l: { name: string; url: string }[]) => {
+      setNames(l.map(x => x.name));
+      if (!document.getElementById("rs-catalog-fonts")) {
+        const st = document.createElement("style"); st.id = "rs-catalog-fonts";
+        st.textContent = l.map(x => `@font-face{font-family:'RS_${x.name}';src:url('${x.url}');font-weight:100 900;}`).join("\n");
+        document.head.appendChild(st);
+      }
+    }).catch(() => {});
+  }, []);
+  return names;
+}
 const blank: Omit<Cliente, "slug" | "fonts" | "logo"> = {
-  nombre: "", accent: "#caffbf", text: "#ffffff", display_font: "Archivo", serif_font: "Playfair", footer: [], darken: 0.32, notas: "",
+  nombre: "", accent: "#caffbf", text: "#ffffff", display_font: "", serif_font: "", footer: [], darken: 0.32, notas: "",
 };
 
 export default function Clientes({ sel }: { sel?: string }) {
@@ -51,7 +67,8 @@ function Editor({ c }: { c: Cliente | null }) {
   const [footer, setFooter] = useState((c?.footer ?? []).join("\n"));
   const [saving, setSaving] = useState(false);
   useEffect(() => { setF(c ? { ...blank, ...c } : { ...blank }); setFooter((c?.footer ?? []).join("\n")); }, [c]);
-  const fonts = [...BUILTIN, ...(c?.fonts ?? []).map(x => x.replace(/\.(ttf|otf|woff2?)$/i, ""))];
+  const catalog = useCatalog();
+  const fonts = [...(c?.fonts ?? []).map(x => x.replace(/\.(ttf|otf|woff2?)$/i, "")), ...catalog];
   const save = async () => {
     setSaving(true);
     const body = { ...f, footer: footer.split("\n").map(s => s.trim()).filter(Boolean) };
@@ -83,10 +100,10 @@ function Editor({ c }: { c: Cliente | null }) {
         <Field label="Color de acento"><Color v={f.accent} on={v => setF({ ...f, accent: v })} /></Field>
         <Field label="Color de texto"><Color v={f.text} on={v => setF({ ...f, text: v })} /></Field>
         <Field label="Fuente de títulos">
-          <select className="input" value={f.display_font} onChange={e => setF({ ...f, display_font: e.target.value })}>{fonts.map(x => <option key={x}>{x}</option>)}</select>
+          <select className="input" style={{ fontFamily: `'RS_${f.display_font}'` }} value={f.display_font} onChange={e => setF({ ...f, display_font: e.target.value })}><option value="">Que Claude elija según el video</option>{fonts.map(x => <option key={x} style={{ fontFamily: `'RS_${x}'` }}>{x}</option>)}</select>
         </Field>
         <Field label="Fuente de frases">
-          <select className="input" value={f.serif_font} onChange={e => setF({ ...f, serif_font: e.target.value })}>{fonts.map(x => <option key={x}>{x}</option>)}</select>
+          <select className="input" style={{ fontFamily: `'RS_${f.serif_font}'` }} value={f.serif_font} onChange={e => setF({ ...f, serif_font: e.target.value })}><option value="">Que Claude elija según el video</option>{fonts.map(x => <option key={x} style={{ fontFamily: `'RS_${x}'` }}>{x}</option>)}</select>
         </Field>
         <div className="col-span-2">
           <Field label="Pie de página (una línea por renglón)"><textarea className="input h-24 py-3 resize-none" value={footer} onChange={e => setFooter(e.target.value)} placeholder={"CAFÉ AURORA · PALERMO\nPedidos por mensaje privado"} /></Field>
@@ -98,8 +115,8 @@ function Editor({ c }: { c: Cliente | null }) {
 
       {/* muestra */}
       <div className="mt-6 rounded-[22px] bg-ink p-6 text-center" style={{ background: `linear-gradient(rgba(0,0,0,${f.darken}),rgba(0,0,0,${f.darken})), #4a8fd8` }}>
-        <div className="text-[34px] font-black uppercase tracking-tight leading-none" style={{ color: f.text }}>Nueva <span style={{ color: f.accent }}>colección</span></div>
-        <div className="mt-2 font-serif text-lg" style={{ color: f.text }}>Llegó el otoño.</div>
+        <div className="text-[34px] font-black uppercase tracking-tight leading-none" style={{ color: f.text, fontFamily: `'RS_${f.display_font}'` }}>Nueva <span style={{ color: f.accent }}>colección</span></div>
+        <div className="mt-2 font-serif text-lg" style={{ color: f.text, fontFamily: `'RS_${f.serif_font}', serif` }}>Llegó el otoño.</div>
         <div className="mt-6 text-[11px] font-bold tracking-wide" style={{ color: f.text }}>{footer.split("\n")[0]}</div>
       </div>
 

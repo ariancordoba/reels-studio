@@ -5,6 +5,10 @@ import { Dropzone, Field, ICON, Progress, cx, imagesFrom } from "../components/u
 import AccentInput from "../components/AccentInput";
 import { ClientAvatar, go, openClaude } from "../App";
 
+const MUSICAS: [string, string][] = [["", "Que Claude elija según el rubro"], ["pop", "Pop · alegre"], ["house", "House · energía"],
+  ["reggaeton", "Reggaetón · fiesta"], ["trap", "Trap · urbano"], ["funk", "Funk · con onda"], ["lofi", "Lo-fi · relajado"],
+  ["corporativo", "Corporativa · prolija"], ["cinematico", "Cinematográfica · épica"], ["ambient", "Ambient · suave"]];
+
 export interface Campo { key: string; escena: number; label: string; kind: string; ejemplo: string; texto: string; t0: number; t1: number }
 export interface Plantilla {
   id: string; nombre: string; descripcion: string; origen: string; cliente?: string; creada: string;
@@ -20,6 +24,7 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
   const [crudos, setCrudos] = useState<File[]>([]);
   const [refs, setRefs] = useState<File[]>([]);
   const [instr, setInstr] = useState("");
+  const [musica, setMusica] = useState("");
   const [duracion, setDuracion] = useState("");
   const [plantillas, setPlantillas] = useState<Plantilla[] | null>(null);
   const [pid, setPid] = useState("");
@@ -51,7 +56,7 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
     const fd = new FormData();
     fd.append("titulo", titulo.trim());
     fd.append("cliente", cliente);
-    fd.append("instrucciones", instr);
+    fd.append("instrucciones", instr + (musica ? `\n\nMúsica: ${MUSICAS.find(m => m[0] === musica)?.[1]} (music.genre = "${musica}").` : ""));
     if (duracion && !pl) fd.append("duracion", duracion);
     if (pl) {
       fd.append("plantilla", pl.id);
@@ -134,6 +139,11 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
               <Field label="Instrucciones / guion" hint="Qué es, cuándo, dónde, qué tiene que decir, el tono. Podés pegar (Ctrl+V) o arrastrar imágenes de estilo.">
                 <textarea className="input h-40 py-3 resize-none leading-relaxed" value={instr} onChange={e => setInstr(e.target.value)} {...imgHandlers}
                   placeholder={"Qué: lanzamiento de la colección otoño\nCuándo: desde el lunes 10\nDónde: local de Palermo y tienda online\nPara quién: mujeres de 25 a 40\nTono: cálido y descontracturado"} />
+              </Field>
+              <Field label="Música">
+                <select className="input" value={musica} onChange={e => setMusica(e.target.value)}>
+                  {MUSICAS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </Field>
             </div>
           )}

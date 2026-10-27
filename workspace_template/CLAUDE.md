@@ -91,6 +91,11 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
     "display_font": "Archivo",    // títulos: grotesca ancha en mayúsculas
     "display_stretch": 125, "display_weight": 900,
     "serif_font": "Playfair",     // subtítulos finos
+    "script_font": "Caveat",      // líneas "script" (a mano)
+    "display_uppercase": true,    // títulos en mayúsculas
+    "display_anim": "caida", "serif_anim": "subida", "script_anim": "desenfoque",  // animación por defecto de cada tipo
+    "text_out": "corte",          // cómo se van los textos al terminar cada escena
+    "look": "normal",             // estilo visual por defecto de los textos
     "darken": 0.32,               // oscurecido general (0.25–0.45). Más alto = el texto se lee mejor
     "top_gradient": 0.20, "bottom_gradient": 0.35,
     "contrast": 1.10, "saturation": 1.18, "vignette": 0.28
@@ -114,32 +119,37 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
       { "kind": "display", "text": "CAFÉ AURORA", "size": 38, "y": 330, "delay": 0.0, "spacing": "0.12em" },
       { "kind": "display", "text": "✨ NUEVA", "size": 112, "y": 385, "delay": 0.10 },
       { "kind": "display", "text": "*CARTA*", "size": 112, "y": 500, "delay": 0.30 },
-      { "kind": "serif", "text": "Sabores de otoño, desde hoy.", "size": 60, "y": 620, "delay": 0.5 },
-      { "kind": "emoji", "text": "☕🍂", "size": 120, "y": 700, "delay": 0.9 } ] }
+      { "kind": "serif", "text": "Sabores de otoño, desde hoy.", "size": 60, "y": 620, "delay": 0.5, "anim": "maquina" },
+      { "kind": "script", "text": "hecho con *amor*", "size": 70, "y": 700, "delay": 0.8, "look": "resaltado" },
+      { "kind": "emoji", "text": "☕🍂", "size": 120, "y": 790, "delay": 0.9 } ],
+      "out": "fade" }   // opcional: cómo se va esta escena
   ],
   "footer": ["LÍNEA 1 DEL PIE", "línea 2"],   // fijo abajo (y≈1700), entra una vez y se queda
-  "music": { "mode": "synth", "bpm": 120, "key": "Am", "progression": ["Am","F","C","G"],
+  "music": { "mode": "synth",
+             "genre": "pop",          // ver tabla de géneros; bpm y progresión típicos salen del género
+             "key": "C",              // opcional: tonalidad (para el pad del drop)
+             "progression": ["C","G","Am","F"],  // opcional: acordes (admite m, 7, maj7, m7, sus2, sus4, add9)
              "build": [5.0, 6.5],   // redoble que acelera (opcional)
              "gap": [6.5, 7.0],     // silencio antes del drop (opcional)
              "drop": 7.0,           // golpe fuerte (opcional)
-             "whooshes": [2.0, 4.0],  // en los cortes con látigo
-             "pops": [7.95],          // cuando aparecen emojis
-             "target_lufs": -12 }
+             "target_lufs": -12 },
+  "sfx": [ { "t": 7.0, "type": "impacto" }, { "t": 9.1, "type": "caja_registradora", "gain": 0.8 } ],
+  "auto_sfx": true   // whoosh en cortes con látigo, teclas en "maquina", glitch, pops… (false = sólo los de "sfx")
   // o { "mode": "file", "path": "<path tal cual de musica_disponible.json>", "offset": 3.2, "license": "<licencia de ahí>" }
   // o { "mode": "none" }
 }
 ```
 
 ### Reglas y criterios
-- **Texto**: `kind` = `display` (títulos, en mayúsculas automáticamente), `serif` (frase fina),
-  `emoji`. Las palabras entre `*asteriscos*` van en el color de acento. `y` es el borde de arriba de la línea.
+- **Texto**: `kind` = `display` (títulos, en mayúsculas si `display_uppercase`), `serif` (frase fina),
+  `script` (a mano), `emoji`. Las palabras entre `*asteriscos*` van en el color de acento. `y` es el borde de arriba de la línea.
   El alto de una línea ≈ `size`. Dejá ~10 px entre líneas display y ~20 px antes de una serif.
   Cualquier línea más ancha que 960 px se achica sola, pero mejor elegir tamaños que entren
   (display a 112 px entran ~10–11 caracteres; a 84 px ~14; serif a 60 px ~30).
 - Texto en el **tercio de arriba** (y 280–1000); abajo (y > 1650) está el pie. Nada entre 1550 y 1680.
 - Máximo 3–4 líneas por escena, salvo el cierre. Cada escena tiene que poder leerse: ≥ 1.8 s en pantalla
   después de que entra la última línea; el último texto ≥ 2 s antes del fundido.
-- `delay` escalonado 0.1–0.35 s entre líneas (display cae letra por letra; serif sube; emoji hace pop).
+- `delay` escalonado 0.1–0.35 s entre líneas. Con `maquina` dale más tiempo (≈ 0.045 s por letra).
 - **Cortes sobre la grilla de beats** (60/bpm s; a 120 BPM cada 0.5 s). `reels check` avisa si no.
   Los cortes de la escena de texto y del plano conviene que coincidan.
 - `src_in + (t1 - t0) * speed` no puede pasar la duración del crudo.
@@ -155,6 +165,63 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
 - Estructura típica: gancho (0–2 s) → info (qué, cuándo) → build → drop con el mensaje principal → cierre
   con lugar/contacto.
 
+### Tipografía, animación, música y sonido: **variá**
+Hay mucho repertorio: no hagas siempre lo mismo. Elegí según el **rubro, la referencia y el tono** del pedido, y
+si es un cliente con videos anteriores, mantené su identidad pero cambiá algo (otra animación, otro género, otra
+combinación). Si `cliente.json` tiene tipografías elegidas, esas mandan; si están vacías o son
+`Archivo` + `Playfair` (los valores de fábrica de la app), **elegí vos** las que mejor van con el rubro.
+
+**Tipografías incluidas** (`display_font`, `serif_font`, `script_font` o `font` por línea):
+| nombre | estilo | ideal para |
+|---|---|---|
+| Archivo · Anton · BebasNeue · Oswald | impacto/condensadas | deportes, eventos, promos, urgencia |
+| Unbounded · RubikMonoOne | redondeadas anchas | tech, gamer, juvenil |
+| Montserrat · Poppins · DMSans | modernas limpias | servicios, emprendimientos, corporativo (con `display_uppercase: false` quedan muy bien) |
+| Bricolage · Syne | con personalidad | diseño, moda, arte |
+| Playfair · DMSerifDisplay · Fraunces · InstrumentSerif · AbrilFatface | serif elegantes | gastronomía, moda, belleza, inmobiliaria, premium |
+| Caveat · Pacifico · PermanentMarker | manuscritas | toque personal, cercano, verano, descontracturado |
+| SpaceMono | monoespaciada | tech, datos, efecto máquina de escribir |
+
+**Animaciones de entrada** (`anim` por línea, o `display_anim`/`serif_anim`/`script_anim` en style):
+`caida` (letras caen girando y rebotan, enérgico) · `subida` (letras suben, suave) · `pop` (letras aparecen con
+rebote, divertido) · `maquina` (máquina de escribir con cursor, informativo; suenan teclas) · `fade` (aparece
+suave, elegante) · `deslizar` (se revela de izquierda a derecha, prolijo/corporativo) · `zoom` (llega de grande
+y desenfocado, impacto) · `palabras` (palabra por palabra, para frases clave) · `rebote` (la línea sube y rebota,
+juguetón) · `ola` (letras ondulan, verano/infantil) · `glitch` (interferencia digital, tech/urbano; suena) ·
+`desenfoque` (letras se enfocan, lifestyle/premium) · `rotar` (gira en 3D, revelación).
+**Salidas** (`out` por línea o escena, `text_out` en style): `corte` · `fade` · `subir` · `achicar` ·
+`desenfoque` · `deslizar`. Con planos rápidos usá `corte`; en videos calmos, `fade` o `desenfoque`.
+**Estilos visuales** (`look` por línea, o `style.look`): `normal` (color + sombra suave) · `caja` (texto sobre
+una caja de color, `box_color` o el acento; muy legible sobre fondos claros) · `contorno` (sólo el borde de las
+letras, las palabras en acento quedan llenas) · `resaltado` (las palabras en acento con fondo tipo marcador) ·
+`neon` (brillo del color de acento; ideal de noche/fondos oscuros) · `sombra` (sombra dura retro en el acento).
+**Alineación** (`align`): `centro` · `izquierda` · `derecha` (margen de 60 px). Texto a la izquierda queda muy
+editorial/moderno.
+Combiná: un título `zoom` + `caja`, una frase `maquina`, una firma `script` con `desenfoque`… Pero sin
+mezclar más de 2–3 animaciones distintas por video: coherencia > cantidad.
+
+**Música** (`music.genre`):
+| género | BPM | para |
+|---|---|---|
+| `house` | 120 | energía de club, eventos, deportes |
+| `pop` | 116 | alegre, para casi todo, comercios |
+| `trap` | 140 | urbano, moda streetwear, jóvenes |
+| `reggaeton` | 95 | fiesta, verano, boliches, promos descontracturadas |
+| `lofi` | 80 | cafés, estudio, deco, calma |
+| `cinematico` | 90 | lanzamientos, inmobiliaria premium, épico (braam en el drop) |
+| `corporativo` | 110 | empresas, servicios profesionales, institucional |
+| `funk` | 108 | gastronomía, moda retro, con onda |
+| `ambient` | 70 | bienestar, spa, salud, suave |
+Ajustá los cortes a la grilla del BPM del género (60/BPM s por beat). El `drop` funciona en todos; en `lofi` y
+`ambient` mejor sin `gap`.
+
+**Efectos de sonido** (`sfx`: `{ t, type, gain }`): `whoosh` · `whoosh_corto` · `swipe` · `pop` · `click` ·
+`tick` · `glitch` · `camara` · `ding` (dato importante) · `notificacion` · `impacto` · `boom` · `riser`
+(1.5 s de subida que termina en t+1.5) · `reversa` (platillo al revés, termina en t+1.5) · `caja_registradora`
+(precio/oferta) · `burbuja`. Con `auto_sfx: true` ya suenan solos los whooshes de los cortes con látigo, las teclas
+de `maquina`, el `glitch` y los pops de `pop`/`palabras`/emojis: agregá a mano sólo los que suman (un `ding`
+cuando aparece el precio, `camara` en una foto, `caja_registradora` en una oferta). Menos es más: 2–4 por video.
+
 ### Pedidos típicos → qué tocar
 | pedido | cambio |
 |---|---|
@@ -163,4 +230,9 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
 | "que se lea mejor" | subir `darken`, bajar texto a zona más oscura, o `size` más grande |
 | "otra toma al principio" | cambiar `src_in`/`clip` del primer plano (mirá las hojas del crudo) |
 | "más rápido / más dinámico" | planos más cortos, `whip` en los cortes, `bpm` más alto |
-| "sin música" | `"music": { "mode": "none" }` |
+| "sin música" | `"music": { "mode": "none" }` (los efectos de sonido siguen; `"auto_sfx": false` y `"sfx": []` para silencio total) |
+| "otra música / más tranquila / más movida" | otro `music.genre` (lofi/ambient/corporativo = tranquila; house/trap/reggaeton = movida) |
+| "otra letra / tipografía" | `display_font`/`serif_font` de la tabla (o `font` en una línea) |
+| "que el texto aparezca distinto" | otra `anim` (y quizás `out`) |
+| "que resalte más" | `look: "caja"` o `"resaltado"` en esa línea |
+| "más efectos / menos efectos" | agregar o sacar `sfx`; `auto_sfx: false` para sólo los manuales |

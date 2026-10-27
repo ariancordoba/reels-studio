@@ -207,6 +207,10 @@ const RAPIDOS: { id: string; label: string }[] = [
   { id: "fondo_oscuro", label: "Se lee mejor" }, { id: "texto_grande", label: "Textos más grandes" },
   { id: "texto_chico", label: "Textos más chicos" }, { id: "sin_musica", label: "Sin música" },
 ];
+const VARIAR: { id: string; label: string }[] = [
+  { id: "otra_musica", label: "🎵 Otra música" }, { id: "otra_animacion", label: "✨ Otra animación" },
+  { id: "otra_letra", label: "🔤 Otra tipografía" }, { id: "otro_estilo", label: "🎨 Otro estilo de texto" },
+];
 
 function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => void }) {
   const { toast, estado } = useStore();
@@ -278,6 +282,10 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
           <div className="flex flex-wrap gap-2 mb-2 items-center">
             <span className="text-[12px] text-ink-muted flex items-center gap-1 mr-1"><Zap size={13} /> Al instante, sin Claude:</span>
             {RAPIDOS.map(r => <button key={r.id} disabled={busy || noVersion} onClick={() => quick(r.id)} className="chip bg-lime/50 hover:bg-lime disabled:opacity-40">{r.label}</button>)}
+          </div>
+          <div className="flex flex-wrap gap-2 mb-2 items-center">
+            <span className="text-[12px] text-ink-muted flex items-center gap-1 mr-1"><Zap size={13} /> Variar, sin Claude:</span>
+            {VARIAR.map(r => <button key={r.id} disabled={busy || noVersion} onClick={() => quick(r.id)} className="chip bg-ink text-white hover:bg-black/80 disabled:opacity-40">{r.label}</button>)}
           </div>
           <div className="flex flex-wrap gap-2 mb-3 items-center">
             <span className="text-[12px] text-ink-muted flex items-center gap-1 mr-1"><Sparkles size={13} /> Ideas para Claude:</span>

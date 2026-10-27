@@ -5,15 +5,34 @@
   body.preview { background:#4a8fd8; }
   #stage { position:absolute; inset:0; }
   .scene { position:absolute; left:0; right:0; top:0; display:none; }
-  .line { position:absolute; left:0; right:0; text-align:center; white-space:nowrap; }
+  .line { position:absolute; left:0; right:0; padding:0 60px; white-space:nowrap; perspective:900px; }
+  .line.centro { text-align:center; } .line.izquierda { text-align:left; } .line.derecha { text-align:right; }
+  .box { display:inline-block; will-change:transform, opacity, filter; transform-origin:50% 60%; }
   .d { font-family:var(--display); font-weight:var(--display-weight); font-stretch:var(--display-stretch);
-       letter-spacing:-0.01em; line-height:1; text-transform:uppercase; }
+       letter-spacing:-0.01em; line-height:1; text-transform:var(--display-case); }
   .s { font-family:var(--serif); font-weight:var(--serif-weight); line-height:1; }
+  .sc { font-family:var(--script); font-weight:500; line-height:1.05; }
   .e { line-height:1; }
   .ch { display:inline-block; transform-origin:50% 90%; will-change:transform; }
-  .w { color:var(--text); text-shadow:var(--shadow); }
-  .n { color:var(--accent); text-shadow:var(--shadow); }
   .emo { font-family:var(--emoji); font-stretch:100%; font-weight:400; }
+  .cursor { display:inline-block; width:.08em; height:.85em; margin-left:.06em; background:var(--accent); vertical-align:-.05em; }
+
+  /* looks */
+  .look-normal .w   { color:var(--text); text-shadow:var(--shadow); }
+  .look-normal .n   { color:var(--accent); text-shadow:var(--shadow); }
+  .look-caja .box   { background:var(--box); padding:.14em .38em .1em; border-radius:.16em; }
+  .look-caja .w, .look-caja .n { color:var(--on-box); }
+  .look-caja .n     { text-decoration:underline; text-decoration-thickness:.08em; text-underline-offset:.1em; }
+  .look-contorno .w { color:transparent; -webkit-text-stroke:.035em var(--text); }
+  .look-contorno .n { color:var(--accent); text-shadow:var(--shadow); }
+  .look-resaltado .w { color:var(--text); text-shadow:var(--shadow); }
+  .look-resaltado .n { color:var(--on-accent); background:var(--accent); padding:.06em 0 .02em;
+                       box-shadow:.04em 0 0 var(--accent), -.04em 0 0 var(--accent); }  /* sin rayitas entre letras */
+  .look-neon .w     { color:#fff; text-shadow:0 0 .06em #fff, 0 0 .22em var(--accent), 0 0 .55em var(--accent); }
+  .look-neon .n     { color:var(--accent); text-shadow:0 0 .06em var(--accent), 0 0 .3em var(--accent), 0 0 .7em var(--accent); }
+  .look-sombra .w   { color:var(--text); text-shadow:.07em .07em 0 var(--accent); }
+  .look-sombra .n   { color:var(--accent); text-shadow:.07em .07em 0 rgba(0,0,0,.55); }
+
   #footer { position:absolute; left:0; right:0; text-align:center; font-family:var(--display); font-weight:800;
             font-stretch:112%; color:var(--text); line-height:1.35; letter-spacing:.02em;
             text-shadow:0 2px 8px rgba(0,0,0,.45); }
@@ -23,56 +42,85 @@
 <div id="footer"></div>
 <script src="motion.js"></script>
 <script>
-// Spec inyectado por overlay.py: window.__SPEC = { format, style, scenes, footer, fonts:{display, serif, emoji} }
+// Spec inyectado por overlay.py: window.__SPEC = { format, style, scenes, footer, fonts:{<nombre>: url, __emoji__: url} }
 // Las palabras entre *asteriscos* van en el color de acento.
 const SPEC = window.__SPEC;
 const ST = SPEC.style, FONTS = SPEC.fonts || {};
-const MAX_W = 960;  // ninguna línea más ancha (margen 60 px)
+const MAX_W = 960;   // ninguna línea más ancha (margen 60 px)
+const OUT_DUR = 0.3; // duración de la animación de salida
+// segundos entre letras/palabras (iguales que engine/sfx.py STAGGER, para que el sonido caiga justo)
+const STAGGER = { maquina: 0.045, palabras: 0.16, pop: 0.05 };
 const ANIM = {  // parámetros aprobados en el video ejemplo
-  display: { stagger: 0.032, zeta: 0.45, omega: 24, dist: 0.75, squash: 0.0022, max: 0.25, rotOdd: -28, rotEven: 22 },
-  serif:   { stagger: 0.022, zeta: 0.7, omega: 20 },
-  emoji:   { stagger: 0.14, zeta: 0.38, omega: 22 },
+  caida: { stagger: 0.032, zeta: 0.45, omega: 24, dist: 0.75, squash: 0.0022, max: 0.25, rotOdd: -28, rotEven: 22 },
+  subida: { stagger: 0.022, zeta: 0.7, omega: 20 },
+  emoji: { stagger: 0.14, zeta: 0.38, omega: 22 },
 };
 
+const fam = n => 'F_' + String(n).toLowerCase().replace(/[^a-z0-9]/g, '');
 (function fonts() {
   const css = [];
-  const face = (fam, url) => url && css.push(
-    `@font-face{font-family:'${fam}';src:url('${url}');font-weight:100 900;font-stretch:50% 200%;}`);
-  face('DisplayX', FONTS.display); face('SerifX', FONTS.serif); face('EmojiX', FONTS.emoji);
+  for (const [name, url] of Object.entries(FONTS)) {
+    if (!url) continue;
+    const f = name === '__emoji__' ? 'EmojiX' : fam(name);
+    css.push(`@font-face{font-family:'${f}';src:url('${url}');font-weight:100 900;font-stretch:50% 200%;}`);
+  }
   const st = document.createElement('style'); st.textContent = css.join('\n'); document.head.appendChild(st);
   const r = document.documentElement.style;
-  r.setProperty('--display', `'DisplayX','${ST.display_font}'`);
-  r.setProperty('--serif', `'SerifX','${ST.serif_font}',serif`);
+  r.setProperty('--display', `'${fam(ST.display_font)}','${ST.display_font}',sans-serif`);
+  r.setProperty('--serif', `'${fam(ST.serif_font)}','${ST.serif_font}',serif`);
+  r.setProperty('--script', `'${fam(ST.script_font)}','${ST.script_font}',cursive`);
   r.setProperty('--emoji', `'EmojiX','Noto Color Emoji','Segoe UI Emoji','Apple Color Emoji'`);
   r.setProperty('--display-weight', ST.display_weight);
   r.setProperty('--display-stretch', ST.display_stretch + '%');
+  r.setProperty('--display-case', ST.display_uppercase === false ? 'none' : 'uppercase');
   r.setProperty('--serif-weight', ST.serif_weight);
   r.setProperty('--text', ST.text); r.setProperty('--accent', ST.accent); r.setProperty('--shadow', ST.text_shadow);
+  const box = ST.box_color || ST.accent;
+  r.setProperty('--box', box);
+  r.setProperty('--on-box', contrast(box)); r.setProperty('--on-accent', contrast(ST.accent));
 })();
 
+function contrast(hex) {  // texto oscuro sobre fondos claros, blanco sobre oscuros
+  const h = hex.replace('#', ''); const v = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  const [r, g, b] = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111111' : '#ffffff';
+}
+const rnd = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };  // determinista
 const EMOJI = /\p{Extended_Pictographic}/u;
 const seg = new Intl.Segmenter('es', { granularity: 'grapheme' });
-const KIND = { display: 'd', serif: 's', emoji: 'e' };
+const KIND = { display: 'd', serif: 's', script: 'sc', emoji: 'e' };
+const DEFAULT_ANIM = { display: ST.display_anim || 'caida', serif: ST.serif_anim || 'subida', script: ST.script_anim || 'desenfoque', emoji: 'pop' };
 
 const stage = document.getElementById('stage');
 const built = SPEC.scenes.map(sc => {
   const el = document.createElement('div'); el.className = 'scene'; stage.appendChild(el);
   const lines = sc.lines.map(L => {
-    const ln = document.createElement('div'); ln.className = 'line ' + KIND[L.kind];
+    const look = L.kind === 'emoji' ? 'normal' : (L.look || ST.look || 'normal');
+    const ln = document.createElement('div');
+    ln.className = `line ${KIND[L.kind]} ${L.align || 'centro'} look-${look}`;
     ln.style.fontSize = L.size + 'px'; ln.style.top = L.y + 'px';
+    if (L.font) ln.style.fontFamily = `'${fam(L.font)}','${L.font}'`;
     if (L.spacing) ln.style.letterSpacing = L.spacing;
-    let accent = false; const chars = [];
+    const box = document.createElement('span'); box.className = 'box'; ln.appendChild(box);
+    let accent = false, word = 0, prevSpace = false; const chars = [];
     for (const { segment: c } of seg.segment(L.text)) {
       if (c === '*') { accent = !accent; continue; }
       const sp = document.createElement('span');
       const isEmo = EMOJI.test(c);
       sp.className = 'ch ' + (accent ? 'n' : 'w') + (isEmo ? ' emo' : '');
       if (L.color && !accent) sp.style.color = L.color;
-      sp.textContent = c === ' ' ? ' ' : c;
-      ln.appendChild(sp); if (c !== ' ') chars.push({ sp, isEmo });
+      sp.textContent = c === ' ' ? ' ' : c;  // espacio duro: un espacio común en un inline-block no ocupa lugar
+      box.appendChild(sp);
+      if (c === ' ') { prevSpace = true; sp._space = true; chars.push({ sp, space: true, word }); continue; }
+      if (prevSpace && chars.some(x => !x.space)) word++;
+      prevSpace = false;
+      chars.push({ sp, isEmo, word, space: false });
     }
+    const anim = L.kind === 'emoji' ? 'emoji' : (L.anim || DEFAULT_ANIM[L.kind]);
+    let cursor = null;
+    if (anim === 'maquina') { cursor = document.createElement('span'); cursor.className = 'cursor'; box.appendChild(cursor); }
     el.appendChild(ln);
-    return { L, chars };
+    return { L, chars, box, anim, out: L.out || sc.out || ST.text_out || 'corte', cursor };
   });
   return { sc, el, lines };
 });
@@ -85,35 +133,127 @@ for (const [i, txt] of (F.lines || []).entries()) {
   foot.appendChild(document.createTextNode(txt));
 }
 
-// Reveal por letra: display cae girando y rebota, serif sube desde alturas distintas, emoji hace pop con squash.
+// ── entrada por letra / palabra / línea
+function animate(o, lt, t) {
+  const { L, chars, box, anim, cursor } = o;
+  const size = L.size;
+  let lineTf = '', lineOp = 1, lineFilter = '', clip = '';
+  const vis = chars.filter(c => !c.space);
+  const setAll = (fn) => vis.forEach((c, i) => fn(c.sp, i, c));
+  chars.forEach(c => { if (c.space) { c.sp.style.display = ''; } });
+
+  switch (anim) {
+    case 'caida': setAll((sp, i) => {
+      const A = ANIM.caida, m = M.letterDrop(lt, 0, i, { ...A, dist: size * A.dist });
+      sp.style.opacity = m.op;
+      sp.style.transform = `translateY(${-m.y}px) rotate(${(1 - m.k) * (i % 2 ? A.rotOdd : A.rotEven)}deg) scale(${m.sx},${m.sy})`;
+    }); break;
+    case 'subida': setAll((sp, i) => {
+      const A = ANIM.subida, k = M.spring(lt - i * A.stagger, A.zeta, A.omega);
+      const off = ((i * 37) % 5 - 2) * 0.18 * size;
+      sp.style.opacity = M.clamp(k * 2);
+      sp.style.transform = `translateY(${(1 - k) * (size * 0.55 + off)}px)`;
+    }); break;
+    case 'emoji': case 'pop': setAll((sp, i) => {
+      const A = ANIM.emoji, stg = anim === 'emoji' ? A.stagger : STAGGER.pop, tau = lt - i * stg;
+      const k = M.spring(tau, A.zeta, A.omega), v = M.springVel(tau, A.zeta, A.omega);
+      const sq = M.clamp(Math.abs(v) * 0.004, 0, 0.3);
+      sp.style.opacity = M.clamp(k * 3);
+      sp.style.transform = `scale(${k * (1 + sq * 0.5)},${k * (1 - sq * 0.4)}) rotate(${(1 - k) * (anim === 'emoji' ? -40 : -12)}deg)`;
+    }); break;
+    case 'maquina': {
+      const n = Math.floor(lt / STAGGER.maquina) + 1;  // letras ya tipeadas (contando espacios)
+      let k = 0;
+      chars.forEach(c => { c.sp.style.display = k < n && lt >= 0 ? '' : 'none'; c.sp.style.opacity = 1; c.sp.style.transform = ''; k++; });
+      const done = lt > chars.length * STAGGER.maquina + 0.5;
+      cursor.style.opacity = lt < 0 || done ? 0 : (Math.floor(t * 3) % 2 ? 0.2 : 1);
+      break;
+    }
+    case 'fade': {
+      const k = M.easeInOut(lt / 0.55);
+      lineOp = k; lineTf = `translateY(${(1 - k) * size * 0.25}px)`; lineFilter = `blur(${(1 - k) * 6}px)`;
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+    case 'deslizar': {
+      const k = M.spring(lt, 0.9, 12);
+      clip = `inset(-20% ${M.clamp(1 - k) * 100}% -20% -5%)`; lineTf = `translateX(${(1 - k) * -size * 0.6}px)`;
+      lineOp = lt < 0 ? 0 : 1;
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+    case 'zoom': {
+      const k = M.spring(lt, 0.7, 14);
+      lineOp = M.clamp(k * 1.5); lineTf = `scale(${1 + (1 - k) * 0.8})`; lineFilter = `blur(${M.clamp(1 - k) * 14}px)`;
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+    case 'palabras': setAll((sp, i, c) => {
+      const k = M.spring(lt - c.word * STAGGER.palabras, 0.5, 18);
+      sp.style.opacity = M.clamp(k * 2.5);
+      sp.style.transform = `translateY(${(1 - k) * size * 0.3}px) scale(${0.5 + 0.5 * k})`;
+    }); break;
+    case 'rebote': {
+      const k = M.spring(lt, 0.35, 16);
+      lineOp = M.clamp(k * 3); lineTf = `translateY(${(1 - k) * size * 1.2}px)`;
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+    case 'ola': setAll((sp, i) => {
+      const k = M.spring(lt - i * 0.03, 0.55, 18);
+      const wave = Math.sin(t * 5 + i * 0.55) * size * 0.045 * M.clamp(lt - 0.4);
+      sp.style.opacity = M.clamp(k * 2);
+      sp.style.transform = `translateY(${(1 - k) * size * 0.6 + wave}px)`;
+    }); break;
+    case 'glitch': {
+      const g = lt >= 0 && lt < 0.5, f = Math.floor(lt * 30);
+      lineOp = lt < 0 ? 0 : (g && rnd(f, 1) < 0.25 ? 0.15 : 1);
+      if (g) {
+        const dx = (rnd(f, 2) - 0.5) * size * 0.3, sk = (rnd(f, 3) - 0.5) * 18;
+        lineTf = `translateX(${dx}px) skewX(${sk}deg)`;
+        lineFilter = `drop-shadow(${size * 0.06}px 0 0 rgba(255,0,80,.85)) drop-shadow(${-size * 0.06}px 0 0 rgba(0,230,255,.85))`;
+      }
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+    case 'desenfoque': setAll((sp, i) => {
+      const k = M.spring(lt - i * 0.03, 0.9, 14);
+      sp.style.opacity = M.clamp(k * 1.6);
+      sp.style.transform = `scale(${1 + (1 - k) * 0.25})`;
+      sp.style.filter = `blur(${M.clamp(1 - k) * 14}px)`;
+    }); break;
+    case 'rotar': {
+      const k = M.spring(lt, 0.55, 14);
+      lineOp = M.clamp(k * 2); lineTf = `rotateX(${(1 - k) * 90}deg)`;
+      setAll(sp => { sp.style.opacity = 1; sp.style.transform = ''; }); break;
+    }
+  }
+  return { lineTf, lineOp, lineFilter, clip };
+}
+
+// ── salida al terminar la escena
+function exitFx(kind, u, size) {
+  if (kind === 'corte' || u <= 0) return { tf: '', op: 1, filter: '' };
+  const e = M.easeInOut(u);
+  switch (kind) {
+    case 'fade': return { tf: '', op: 1 - e, filter: '' };
+    case 'subir': return { tf: `translateY(${-e * size * 0.8}px)`, op: 1 - e, filter: '' };
+    case 'achicar': return { tf: `scale(${1 - e * 0.7})`, op: 1 - e, filter: '' };
+    case 'desenfoque': return { tf: '', op: 1 - e, filter: `blur(${e * 14}px)` };
+    case 'deslizar': return { tf: `translateX(${e * 320}px)`, op: 1 - e, filter: '' };
+  }
+  return { tf: '', op: 1, filter: '' };
+}
+
 function render(t) {
   for (const b of built) {
     const on = t >= b.sc.t0 && t < b.sc.t1;
     b.el.style.display = on ? 'block' : 'none';
     if (!on) continue;
-    const lt = t - b.sc.t0;
-    for (const { L, chars } of b.lines) {
-      chars.forEach(({ sp }, i) => {
-        if (L.kind === 'display') {
-          const A = ANIM.display;
-          const m = M.letterDrop(lt, L.delay, i, { ...A, dist: L.size * A.dist });
-          const rot = (1 - m.k) * (i % 2 ? A.rotOdd : A.rotEven);
-          sp.style.opacity = m.op;
-          sp.style.transform = `translateY(${-m.y}px) rotate(${rot}deg) scale(${m.sx},${m.sy})`;
-        } else if (L.kind === 'serif') {
-          const A = ANIM.serif;
-          const k = M.spring(lt - L.delay - i * A.stagger, A.zeta, A.omega);
-          const off = ((i * 37) % 5 - 2) * 0.18 * L.size;  // alturas distintas, se alinean al asentar
-          sp.style.opacity = M.clamp(k * 2);
-          sp.style.transform = `translateY(${(1 - k) * (L.size * 0.55 + off)}px)`;
-        } else {
-          const A = ANIM.emoji, tau = lt - L.delay - i * A.stagger;
-          const k = M.spring(tau, A.zeta, A.omega), v = M.springVel(tau, A.zeta, A.omega);
-          const sq = M.clamp(Math.abs(v) * 0.004, 0, 0.3);
-          sp.style.opacity = M.clamp(k * 3);
-          sp.style.transform = `scale(${k * (1 + sq * 0.5)},${k * (1 - sq * 0.4)}) rotate(${(1 - k) * -40}deg)`;
-        }
-      });
+    for (const o of b.lines) {
+      const lt = t - b.sc.t0 - o.L.delay;
+      const a = animate(o, lt, t);
+      const u = (t - (b.sc.t1 - OUT_DUR)) / OUT_DUR;
+      const x = exitFx(o.out, Math.min(1, u), o.L.size);
+      o.box.style.opacity = a.lineOp * x.op;
+      o.box.style.transform = [a.lineTf, x.tf].filter(Boolean).join(' ');
+      o.box.style.filter = [a.lineFilter, x.filter].filter(Boolean).join(' ');
+      o.box.style.clipPath = a.clip;
     }
   }
   const f = M.popIn(t, F.delay ?? 0.25, { rise: 24 });  // el pie entra una vez y se queda
@@ -121,12 +261,13 @@ function render(t) {
 }
 
 function fit() {  // achica cualquier línea que pase de MAX_W (medida en el estado final)
-  render(1e6);
   for (const b of built) {
     b.el.style.display = 'block';
-    for (const ln of b.el.children) {
-      const inner = Array.from(ln.children).reduce((a, c) => a + c.getBoundingClientRect().width, 0);
-      if (inner > MAX_W) ln.style.fontSize = (parseFloat(ln.style.fontSize) * MAX_W / inner) + 'px';
+    for (const o of b.lines) {
+      o.chars.forEach(c => { c.sp.style.display = ''; c.sp.style.transform = ''; c.sp.style.filter = ''; });
+      o.box.style.transform = ''; o.box.style.filter = ''; o.box.style.clipPath = '';
+      const w = o.box.getBoundingClientRect().width;
+      if (w > MAX_W) o.box.parentElement.style.fontSize = (parseFloat(o.box.parentElement.style.fontSize) * MAX_W / w) + 'px';
     }
     b.el.style.display = 'none';
   }
@@ -135,8 +276,7 @@ function fit() {  // achica cualquier línea que pase de MAX_W (medida en el est
 window.__seek = t => { render(t); return true; };
 window.__ready = document.fonts.ready
   .then(() => Promise.all([
-    document.fonts.load(`${ST.display_weight} 100px DisplayX`),
-    document.fonts.load(`${ST.serif_weight} 60px SerifX`),
+    ...Object.keys(FONTS).filter(n => n !== '__emoji__' && FONTS[n]).map(n => document.fonts.load(`700 100px ${fam(n)}`)),
     document.fonts.load(`100px EmojiX`),
   ]))
   .then(() => { fit(); render(0); return true; });

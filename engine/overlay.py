@@ -46,12 +46,19 @@ def font_dirs(extra: list[Path] | None = None) -> list[Path]:
     return [*(extra or []), ASSETS / "fonts"]
 
 
+def used_font_names(spec: Spec) -> list[str]:
+    st = spec.style
+    names = [st.display_font, st.serif_font, st.script_font]
+    names += [ln.font for sc in spec.scenes for ln in sc.lines if ln.font]
+    return list(dict.fromkeys(names))
+
+
 def resolve_fonts(spec: Spec, extra_dirs: list[Path] | None = None) -> dict[str, Path | None]:
+    """{nombre de fuente del spec: archivo} para todas las que usa el video, + "__emoji__"."""
     dirs = font_dirs(extra_dirs)
-    emoji = next((ASSETS / "fonts" / f for f in EMOJI_FILES if (ASSETS / "fonts" / f).exists()), None)
-    return {"display": find_font(spec.style.display_font, dirs),
-            "serif": find_font(spec.style.serif_font, dirs),
-            "emoji": emoji}
+    out: dict[str, Path | None] = {n: find_font(n, dirs) for n in used_font_names(spec)}
+    out["__emoji__"] = next((ASSETS / "fonts" / f for f in EMOJI_FILES if (ASSETS / "fonts" / f).exists()), None)
+    return out
 
 
 def page_payload(spec: Spec, fonts: dict[str, Path | None]) -> dict:

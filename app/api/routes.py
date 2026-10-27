@@ -130,8 +130,8 @@ class Cliente(BaseModel):
     nombre: str
     accent: str = "#caffbf"
     text: str = "#ffffff"
-    display_font: str = "Archivo"
-    serif_font: str = "Playfair"
+    display_font: str = ""  # vacío = que Claude elija
+    serif_font: str = ""
     footer: list[str] = []
     darken: float = 0.32
     notas: str = ""
@@ -736,3 +736,22 @@ def put_aprendizajes(slug: str, body: Aprendizajes):
         raise HTTPException(404)
     projects.client_learnings_path(slug).write_text(body.texto.strip() + "\n", encoding="utf-8")
     return {"ok": True}
+
+
+# ── catálogo de tipografías incluidas (para elegir con vista previa)
+@router.get("/fuentes")
+def fuentes():
+    from engine.fonts import CATALOG
+
+    return [{**f, "url": f"/api/fuente/{f['name']}"} for f in CATALOG]
+
+
+@router.get("/fuente/{name}")
+def fuente(name: str):
+    from engine.overlay import find_font
+    from engine.probe import ASSETS
+
+    f = find_font(Path(name).name, [ASSETS / "fonts"])
+    if not f:
+        raise HTTPException(404)
+    return FileResponse(f, headers={"Cache-Control": "max-age=86400"})
