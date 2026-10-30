@@ -120,7 +120,7 @@ const built = SPEC.scenes.map(sc => {
     let cursor = null;
     if (anim === 'maquina') { cursor = document.createElement('span'); cursor.className = 'cursor'; box.appendChild(cursor); }
     el.appendChild(ln);
-    return { L, chars, box, anim, out: L.out || sc.out || ST.text_out || 'corte', cursor };
+    return { L, chars, box, anim, look, out: L.out || sc.out || ST.text_out || 'corte', cursor };
   });
   return { sc, el, lines };
 });
@@ -250,7 +250,14 @@ function render(t) {
       const a = animate(o, lt, t);
       const u = (t - (b.sc.t1 - OUT_DUR)) / OUT_DUR;
       const x = exitFx(o.out, Math.min(1, u), o.L.size);
-      o.box.style.opacity = a.lineOp * x.op;
+      // con fondo (caja), que la caja aparezca junto con sus letras y no vacía antes
+      let boxOp = 1;
+      if (o.look === 'caja') {
+        const vis = o.chars.filter(c => !c.space);
+        boxOp = o.anim === 'maquina' ? (lt >= 0 ? 1 : 0)
+          : Math.min(1, vis.reduce((s, c) => s + (parseFloat(c.sp.style.opacity || '1') || 0), 0) / Math.max(1, vis.length) * 1.4);
+      }
+      o.box.style.opacity = a.lineOp * x.op * boxOp;
       o.box.style.transform = [a.lineTf, x.tf].filter(Boolean).join(' ');
       o.box.style.filter = [a.lineFilter, x.filter].filter(Boolean).join(' ');
       o.box.style.clipPath = a.clip;
