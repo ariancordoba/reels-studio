@@ -68,7 +68,13 @@ export default function NuevoVideo({ clienteSel }: { clienteSel: string }) {
     // XHR y no fetch: para mostrar el progreso de la subida (los crudos pesan cientos de MB)
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/proyectos");
-    xhr.upload.onprogress = e => e.lengthComputable && setSending(e.loaded / e.total);
+    // redibujar sólo cuando sube un punto porcentual (no con cada pedacito enviado)
+    let lastPct = -1;
+    xhr.upload.onprogress = e => {
+      if (!e.lengthComputable) return;
+      const pct = Math.floor((e.loaded / e.total) * 100);
+      if (pct !== lastPct) { lastPct = pct; setSending(pct / 100); }
+    };
     xhr.onload = () => {
       setSending(null);
       if (xhr.status >= 200 && xhr.status < 300) {

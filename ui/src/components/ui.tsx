@@ -13,6 +13,15 @@ export function imagesFrom(dt: DataTransfer | null): File[] {
     : f);
 }
 
+/** Una sola URL de vista previa por archivo. Crear una en cada render hace que la ventana decodifique las fotos
+ *  originales (de muchos MB) una y otra vez mientras sube y termina sin memoria (página en blanco). */
+const thumbCache = new WeakMap<File, string>();
+export function fileThumb(f: File): string {
+  let u = thumbCache.get(f);
+  if (!u) { u = URL.createObjectURL(f); thumbCache.set(f, u); }
+  return u;
+}
+
 export function cx(...c: (string | false | null | undefined)[]) { return c.filter(Boolean).join(" "); }
 
 export function Badge({ tone = "muted", children, dot }: { tone?: "muted" | "lime" | "danger" | "warn" | "ink" | "ok"; children: ReactNode; dot?: boolean }) {
@@ -105,7 +114,7 @@ export function Dropzone({ label, hint, files, onFiles, accept = "video/*", mult
         <ul className="mt-2 space-y-1.5">
           {files.map((f, i) => (
             <li key={i} className="flex items-center gap-2 h-10 px-3 rounded-[14px] bg-surface-muted text-sm">
-              {f.type.startsWith("image/") ? <img src={URL.createObjectURL(f)} className="size-7 rounded-[6px] object-cover" alt="" />
+              {f.type.startsWith("image/") ? <img src={fileThumb(f)} decoding="async" className="size-7 rounded-[6px] object-cover" alt="" />
                 : <FileVideo size={16} strokeWidth={1.75} className="text-ink-muted" />}
               <span className="truncate flex-1">{f.name}</span>
               <span className="font-mono text-[12px] text-ink-muted">{(f.size / 1e6).toFixed(0)} MB</span>

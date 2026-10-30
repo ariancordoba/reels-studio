@@ -755,3 +755,20 @@ def fuente(name: str):
     if not f:
         raise HTTPException(404)
     return FileResponse(f, headers={"Cache-Control": "max-age=86400"})
+
+
+# ── errores de la interfaz: al log (Ayuda → Generar diagnóstico los incluye)
+class UiError(BaseModel):
+    message: str = ""
+    stack: str = ""
+    component: str = ""
+    url: str = ""
+
+
+@router.post("/log")
+def ui_log(e: UiError):
+    d = settings.local_dir() / "logs"
+    d.mkdir(exist_ok=True)
+    with open(d / "interfaz.log", "a", encoding="utf-8") as f:
+        f.write(f"\n── {datetime.now().isoformat(timespec='seconds')} {e.url}\n{e.message}\n{e.stack[:3000]}\n{e.component[:2000]}\n")
+    return {"ok": True}

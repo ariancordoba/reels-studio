@@ -15,6 +15,7 @@ import MusicaPage from "./pages/Musica";
 import Plantillas from "./pages/Plantillas";
 import Ayuda from "./pages/Ayuda";
 import ClaudeConnect from "./components/ClaudeConnect";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 /** Abre la ventana "Conectar Claude" desde cualquier pantalla. */
 export const openClaude = () => window.dispatchEvent(new Event("rs:claude"));
@@ -90,7 +91,7 @@ function Shell() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} page={page} cliente={cliente} setCliente={setCliente} />
       <main className="flex-1 min-w-0 flex flex-col gap-6 overflow-y-auto overflow-x-hidden -mr-3 pr-3 pb-4">
         {page !== "proyecto" && <Header onSearch={() => setSearch(true)} proyectos={filtered} />}
-        {body}
+        <ErrorBoundary key={route.join("/")}>{body}</ErrorBoundary>
       </main>
       <SearchPalette open={search} onClose={() => setSearch(false)} proyectos={proyectos ?? []} />
       {estado && !estado.configurado && <Onboarding />}

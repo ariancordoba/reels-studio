@@ -5,7 +5,7 @@ import {
 import {
   api, activeJob, fecha, fileUrl, hace, useStore, type ChatMsg, type Proyecto, type Trabajo, type Version,
 } from "../api";
-import { Badge, ICON, Progress, Segmented, cx, imagesFrom } from "../components/ui";
+import { Badge, ICON, Progress, Segmented, cx, fileThumb, imagesFrom } from "../components/ui";
 import { go, openClaude } from "../App";
 import { jobFraction, statusOf } from "./Inicio";
 import GuionEditor from "./Guion";
@@ -295,7 +295,7 @@ function Chat({ p, job, onSent }: { p: Proyecto; job?: Trabajo; onSent: () => vo
             <div className="flex gap-2 mb-2 flex-wrap">
               {files.map((f, i) => (
                 <div key={i} className="relative">
-                  <img src={URL.createObjectURL(f)} className="h-16 w-16 rounded-[12px] object-cover" alt="" />
+                  <img src={fileThumb(f)} decoding="async" className="h-16 w-16 rounded-[12px] object-cover" alt="" />
                   <button className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-ink text-white grid place-items-center" onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={12} /></button>
                 </div>
               ))}
