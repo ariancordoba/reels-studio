@@ -45,6 +45,38 @@ def size(path: str | Path) -> tuple[int, int]:
     return (h, w) if orient in (5, 6, 7, 8) else (w, h)
 
 
+def logo_png(src: str | Path, dst: str | Path, tol: int = 28) -> Path:
+    """Logo sobre fondo liso (blanco o del color de las esquinas) → PNG transparente, recortado al contenido.
+
+    Sólo se borra el fondo que toca los bordes (relleno desde afuera): el blanco de adentro del logo queda.
+    Si ya trae transparencia, sólo se recorta.
+    """
+    with Image.open(src) as im:
+        im = ImageOps.exif_transpose(im).convert("RGBA")
+        rgba = np.asarray(im).copy()
+    if rgba[..., 3].min() < 250:  # ya es transparente
+        alpha = rgba[..., 3]
+    else:
+        bgr = cv2.cvtColor(rgba[..., :3], cv2.COLOR_RGB2BGR)
+        h, w = bgr.shape[:2]
+        mask = np.zeros((h + 2, w + 2), np.uint8)
+        flags = 4 | cv2.FLOODFILL_MASK_ONLY | cv2.FLOODFILL_FIXED_RANGE | (255 << 8)
+        for x, y in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
+            if mask[y + 1, x + 1] == 0:
+                cv2.floodFill(bgr, mask, (x, y), 0, (tol,) * 3, (tol,) * 3, flags)
+        bg = mask[1:-1, 1:-1] > 0
+        alpha = np.where(bg, 0, 255).astype(np.uint8)
+        alpha = cv2.GaussianBlur(alpha, (3, 3), 0)  # borde suave, sin serrucho
+    rgba[..., 3] = alpha
+    ys, xs = np.nonzero(alpha > 10)
+    if len(xs):
+        pad = 4
+        rgba = rgba[max(0, ys.min() - pad): ys.max() + pad + 1, max(0, xs.min() - pad): xs.max() + pad + 1]
+    out = Path(dst)
+    Image.fromarray(rgba, "RGBA").save(out)
+    return out
+
+
 def cover(img: np.ndarray, w: int, h: int) -> np.ndarray:
     """Escala para cubrir w×h y recorta al centro (igual que los videos)."""
     ih, iw = img.shape[:2]

@@ -15,6 +15,7 @@ convierte en video. Nunca escribís código ni tocás el motor: sólo specs y no
 | `analisis/resumen.md` | **empezá por acá**: duración, cortes y tempo de la referencia, movimiento por segundo de cada crudo |
 | `analisis/<video>/hoja_NN.jpg` | hojas de contacto (un cuadro cada 0.5 s con su segundo abajo). Son imágenes: miralas con Read |
 | `analisis/<video>/cortes.jpg` | (referencias) primer cuadro de cada plano |
+| `logo.png` (o .jpg) | (si existe) el logo del cliente: ponelo chico y fijo con `"logo"` (arriba, ~130–170 px de ancho), sin tapar textos. Un fondo blanco liso se saca solo |
 | `cliente.json` | marca del cliente: colores, fuentes, pie de página, oscurecido por defecto, notas de tono |
 | `entrada/plantilla.json` | (si existe) un estilo ya aprobado: `spec` (estructura base: planos, escenas, animación, música) y `reglas` (qué lo hace reconocible). Usalo como base y adaptá textos, crudos y marca |
 | `aprendizajes.md` | (si existe) preferencias de este cliente aprendidas en videos anteriores. **Respetalas siempre** |
@@ -133,6 +134,7 @@ Lienzo 1080×1920 (vertical). Tiempos en segundos. Coordenadas en px del lienzo 
              "gap": [6.5, 7.0],     // silencio antes del drop (opcional)
              "drop": 7.0,           // golpe fuerte (opcional)
              "target_lufs": -12 },
+  "logo": { "file": "logo.png", "pos": "arriba", "width": 150 },  // opcional, fijo todo el video (pos: arriba | arriba_izquierda | arriba_derecha | abajo)
   "sfx": [ { "t": 7.0, "type": "impacto" }, { "t": 9.1, "type": "caja_registradora", "gain": 0.8 } ],
   "auto_sfx": true   // whoosh en cortes con látigo, teclas en "maquina", glitch, pops… (false = sólo los de "sfx")
   // o { "mode": "file", "path": "<path tal cual de musica_disponible.json>", "offset": 3.2, "license": "<licencia de ahí>" }

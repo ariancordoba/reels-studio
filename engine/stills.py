@@ -52,7 +52,8 @@ def render(spec: Spec, clips: dict[str, Path], out_dir: Path, times: list[float]
     if dense and scale == 1.0:
         scale = 0.5  # muchos cuadros: a media resolución alcanza para revisar y es el doble de rápido
     fps = spec.format.fps
-    ov = overlay.render(spec, sorted({round(t * fps) for t in times}), scale, font_dirs)
+    ov = overlay.render(spec, sorted({round(t * fps) for t in times}), scale, font_dirs,
+                        asset_dirs=list(dict.fromkeys(p.parent for p in clips.values())))
     comp = Composer(spec, clips, scale, ov)
     out_dir.mkdir(parents=True, exist_ok=True)
     for old in out_dir.glob("t*.jpg"):

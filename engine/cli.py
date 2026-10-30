@@ -91,7 +91,8 @@ def cmd_render(a, out):
     wav = dest.with_suffix(".wav")
     audio = music.render(t.spec, wav, t.project or t.out_dir)
     out.event("stage", msg="textos")
-    ov = overlay.render(t.spec, list(range(n)), scale, t.font_dirs, out.progress("textos"))
+    ov = overlay.render(t.spec, list(range(n)), scale, t.font_dirs, out.progress("textos"),
+                        asset_dirs=[*t.clip_dirs, *([t.project] if t.project else [])])
     out.event("stage", msg="video")
     compose.render_video(t.spec, t.clips(), dest, audio, scale, ov, crf=23 if a.draft else 18,
                          progress=out.progress("video"))

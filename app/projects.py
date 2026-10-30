@@ -320,6 +320,9 @@ def sync_shared(project: Path):
     slug = meta(project).get("cliente", "")
     shutil.copy2(TEMPLATE, project / "CLAUDE.md")  # las instrucciones mejoran con las actualizaciones
     snapshot_client(project, slug)
+    c = get_client(slug) if slug else None
+    if c and c.get("logo") and (clients_dir() / slug / c["logo"]).exists():  # el logo del cliente, a mano para Claude
+        safe_transfer(clients_dir() / slug / c["logo"], project / f"logo{Path(c['logo']).suffix.lower()}", move=False)
     learned = client_learnings_path(slug) if slug else None
     if learned and learned.exists() and not (project / "aprendizajes.md").exists():
         shutil.copy2(learned, project / "aprendizajes.md")

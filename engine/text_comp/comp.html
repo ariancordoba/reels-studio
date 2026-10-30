@@ -40,6 +40,7 @@
 <body>
 <div id="stage"></div>
 <div id="footer"></div>
+<img id="logo" alt="" style="position:absolute; display:none; filter:drop-shadow(0 4px 14px rgba(0,0,0,.45)); transform-origin:50% 50%;">
 <script src="motion.js"></script>
 <script>
 // Spec inyectado por overlay.py: window.__SPEC = { format, style, scenes, footer, fonts:{<nombre>: url, __emoji__: url} }
@@ -265,6 +266,25 @@ function render(t) {
   }
   const f = M.popIn(t, F.delay ?? 0.25, { rise: 24 });  // el pie entra una vez y se queda
   foot.style.opacity = f.op; foot.style.transform = `translateY(${f.dy}px)`;
+  if (LOGO) {  // logo fijo: entra con un rebote y se queda
+    const k = M.spring(t - (LOGO.delay ?? 0.2), 0.55, 16);
+    logo.style.opacity = M.clamp(k * 1.5) * (LOGO.opacity ?? 1);
+    logo.style.transform = `scale(${0.6 + 0.4 * k})`;
+  }
+}
+
+// ── logo
+const LOGO = SPEC.logo || null;
+const logo = document.getElementById('logo');
+if (LOGO) {
+  logo.src = LOGO.url; logo.style.display = 'block';
+  const w = LOGO.width || 150; logo.style.width = w + 'px';
+  const pos = LOGO.pos || 'arriba';
+  const y = LOGO.y ?? (pos === 'abajo' ? 1540 : 70);
+  logo.style.top = y + 'px';
+  if (pos === 'arriba_izquierda') logo.style.left = '50px';
+  else if (pos === 'arriba_derecha') logo.style.right = '50px';
+  else logo.style.left = (540 - w / 2) + 'px';
 }
 
 function fit() {  // achica cualquier línea que pase de MAX_W (medida en el estado final)
@@ -285,6 +305,7 @@ window.__ready = document.fonts.ready
   .then(() => Promise.all([
     ...Object.keys(FONTS).filter(n => n !== '__emoji__' && FONTS[n]).map(n => document.fonts.load(`700 100px ${fam(n)}`)),
     document.fonts.load(`100px EmojiX`),
+    LOGO ? logo.decode().catch(() => {}) : null,
   ]))
   .then(() => { fit(); render(0); return true; });
 const q = new URLSearchParams(location.search);

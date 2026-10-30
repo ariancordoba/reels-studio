@@ -181,6 +181,16 @@ class MusicNone(_M):
 Music = Annotated[Union[MusicSynth, MusicFile, MusicNone], Field(discriminator="mode")]
 
 
+class Logo(_M):
+    """Logo fijo en todo el video (PNG con transparencia; uno con fondo liso se limpia solo)."""
+    file: str                                   # nombre del archivo (en los crudos, el proyecto o el cliente)
+    pos: Literal["arriba", "arriba_izquierda", "arriba_derecha", "abajo"] = "arriba"
+    width: float = Field(150, ge=40, le=600)    # ancho en px del lienzo
+    y: float | None = None                      # para moverlo arriba/abajo (default según pos)
+    opacity: float = Field(1.0, ge=0.1, le=1)
+    delay: float = 0.2
+
+
 class Sfx(_M):
     t: float = Field(ge=0)
     type: SfxType
@@ -197,6 +207,7 @@ class Spec(_M):
     scenes: list[Scene] = []
     footer: Footer = Footer()
     music: Music = MusicNone(mode="none")
+    logo: Logo | None = None
     sfx: list[Sfx] = []               # efectos de sonido puntuales
     auto_sfx: bool = True             # efectos automáticos según cortes y animaciones de texto
 

@@ -131,6 +131,32 @@ def test_quick_variety_cycles(tmp_path, monkeypatch):
     assert (sp.style.display_anim, sp.style.display_font, sp.style.look) != ("caida", "Archivo", "normal")
 
 
+def test_logo_white_background_removed_and_drawn(tmp_path, monkeypatch):
+    monkeypatch.setenv("REELS_CACHE", str(tmp_path / "cache"))
+    from engine import photos, stills
+
+    # logo: escudo rojo con un círculo blanco ADENTRO, sobre fondo blanco
+    img = np.full((800, 600, 3), 255, np.uint8)
+    cv2.rectangle(img, (150, 200), (450, 600), (40, 40, 200), -1)
+    cv2.circle(img, (300, 400), 80, (255, 255, 255), -1)
+    src = tmp_path / "logo.jpg"
+    cv2.imwrite(str(src), img)
+    out = photos.logo_png(src, tmp_path / "logo.png")
+    rgba = cv2.imread(str(out), cv2.IMREAD_UNCHANGED)
+    assert rgba.shape[2] == 4 and rgba.shape[0] < 450, "recortado al escudo"
+    h, w = rgba.shape[:2]
+    assert rgba[h // 2, w // 2, 3] == 255, "el blanco de adentro queda"
+    # dibujado en el video, arriba al centro
+    bg = tmp_path / "fondo.png"
+    cv2.imwrite(str(bg), np.full((1920, 1080, 3), (30, 120, 30), np.uint8))
+    spec = Spec.model_validate({**base(2.0), "shots": [{"clip": "fondo.png", "t0": 0, "t1": 2.0}],
+                                "logo": {"file": "logo.jpg", "width": 160}, "music": {"mode": "none"}, "auto_sfx": False})
+    shot = stills.render(spec, {"fondo.png": bg, "logo.jpg": src}, tmp_path / "s", times=[1.5])[0]
+    frame = cv2.imread(str(shot))
+    top = frame[70:250, 460:620].astype(int)
+    assert (top[..., 2] - top[..., 1]).max() > 80, "se ve el rojo del logo arriba"
+
+
 def test_every_animation_and_look_renders(tmp_path, monkeypatch):
     """Todas las animaciones y estilos se dibujan (sin errores de JS) y dejan texto visible al asentarse."""
     monkeypatch.setenv("REELS_CACHE", str(tmp_path / "cache"))

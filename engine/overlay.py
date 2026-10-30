@@ -61,15 +61,35 @@ def resolve_fonts(spec: Spec, extra_dirs: list[Path] | None = None) -> dict[str,
     return out
 
 
-def page_payload(spec: Spec, fonts: dict[str, Path | None]) -> dict:
+def resolve_logo(spec: Spec, dirs: list[Path]) -> Path | None:
+    """Archivo del logo listo para usar (PNG transparente). Uno con fondo liso se limpia solo (y se cachea)."""
+    if not spec.logo:
+        return None
+    name = Path(spec.logo.file)
+    src = name if name.is_absolute() and name.exists() else next((d / name for d in dirs if (d / name).is_file()), None)
+    if src is None:
+        raise FileNotFoundError(f"no encuentro el logo «{spec.logo.file}»")
+    from . import photos
+    from .proxies import file_key
+
+    out = cache_root() / "logos" / f"{file_key(src)}.png"
+    if not out.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        photos.logo_png(src, out)
+    return out
+
+
+def page_payload(spec: Spec, fonts: dict[str, Path | None], logo: Path | None = None) -> dict:
     d = spec.model_dump(include={"format", "style", "scenes", "footer"})
     d["fonts"] = {k: (v.resolve().as_uri() if v else None) for k, v in fonts.items()}
+    if logo and spec.logo:
+        d["logo"] = {**spec.logo.model_dump(), "url": logo.resolve().as_uri()}
     return d
 
 
-def overlay_key(payload: dict, fonts: dict[str, Path | None], scale: float) -> str:
+def overlay_key(payload: dict, fonts: dict[str, Path | None], scale: float, logo: Path | None = None) -> str:
     h = hashlib.sha1(json.dumps(payload, sort_keys=True).encode())
-    for src in (COMP, MOTION_JS, *[f for f in fonts.values() if f]):
+    for src in (COMP, MOTION_JS, *[f for f in fonts.values() if f], *([logo] if logo else [])):
         h.update(src.read_bytes() if src.stat().st_size < (40 << 20) else str(src.stat().st_mtime).encode())
     h.update(str(scale).encode())
     return h.hexdigest()[:16]
@@ -93,11 +113,14 @@ def _work(args):
 
 
 def render(spec: Spec, frames: list[int], scale: float = 1.0, font_extra: list[Path] | None = None,
-           progress=None) -> Path:
+           progress=None, asset_dirs: list[Path] | None = None) -> Path:
     """Renderiza los cuadros pedidos (índices a spec.format.fps) y devuelve la carpeta con los PNG."""
     fonts = resolve_fonts(spec, font_extra)
-    payload = page_payload(spec, fonts)
-    out = cache_root() / "overlay" / overlay_key(payload, fonts, scale)
+    # el logo puede estar con los crudos, en el proyecto o en la carpeta del cliente (padre de fonts/)
+    dirs = [*(asset_dirs or []), *[d.parent for d in (font_extra or [])]]
+    logo = resolve_logo(spec, dirs)
+    payload = page_payload(spec, fonts, logo)
+    out = cache_root() / "overlay" / overlay_key(payload, fonts, scale, logo)
     out.mkdir(parents=True, exist_ok=True)
     todo = [f for f in frames if not (out / f"{f:05d}.png").exists()]
     if todo:
