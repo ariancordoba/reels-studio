@@ -180,3 +180,22 @@ def test_every_animation_and_look_renders(tmp_path, monkeypatch):
         img = cv2.imread(str(p))
         band = img[480:620].astype(int)
         assert np.abs(band - [90, 60, 30]).sum(axis=2).max() > 150, f"no se ve el texto con «{a}»"
+
+
+def test_decoded_frames_are_bounded_across_clips(tmp_path, monkeypatch):
+    """Muchos clips no multiplican la memoria: el tope de cuadros en RAM es uno solo por proceso."""
+    monkeypatch.setenv("REELS_CACHE", str(tmp_path / "cache"))
+    from engine import proxies
+
+    for n in range(3):
+        src = tmp_path / f"foto{n}.png"
+        cv2.imwrite(str(src), np.full((64, 36, 3), 40 * n, np.uint8))
+        proxy = proxies.Proxy(src, 36, 64)
+        proxy.build()
+        frame = proxy.dir / "00001.jpg"
+        for i in range(2, 21):
+            (proxy.dir / f"{i:05d}.jpg").write_bytes(frame.read_bytes())
+        (proxy.dir / "done").write_text("20")
+        for i in range(20):
+            proxy.frame(i / proxy.info.fps)
+        assert len(proxies._frames) <= proxies.MAX_CACHED_FRAMES

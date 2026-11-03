@@ -8,6 +8,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+from collections import OrderedDict
 from functools import lru_cache
 from pathlib import Path
 
@@ -15,6 +16,11 @@ import cv2
 import numpy as np
 
 from .probe import NO_WINDOW, cache_root, ffmpeg_exe, probe
+
+# Cuadros decodificados por proceso, entre TODOS los clips: un cuadro 1080×1920 en float32 pesa ~24 MB y se
+# renderiza en varios procesos a la vez. Alcanza con pocos: el video avanza y un látigo reusa cuadros vecinos.
+MAX_CACHED_FRAMES = 12
+_frames: OrderedDict[tuple[Path, int], np.ndarray] = OrderedDict()
 
 
 def file_key(path: str | Path) -> str:
@@ -36,7 +42,6 @@ class Proxy:
         self.info = probe(clip)
         self.w, self.h = w, h
         self.dir = cache_root() / "proxies" / f"{file_key(clip)}_{w}x{h}"
-        self._frames: dict[int, np.ndarray] = {}
 
     @property
     def ready(self) -> bool:
@@ -77,12 +82,15 @@ class Proxy:
     def frame(self, ts: float) -> np.ndarray:
         """Cuadro más cercano al segundo `ts` del clip, float32 BGR 0..1."""
         i = min(max(int(round(ts * self.info.fps)), 0), self.n_frames - 1) + 1
-        f = self._frames.get(i)
-        if f is None:
-            if len(self._frames) > 48:
-                self._frames.clear()
-            img = cv2.imdecode(np.fromfile(str(self.dir / f"{i:05d}.jpg"), np.uint8), cv2.IMREAD_COLOR)
-            f = self._frames[i] = img.astype(np.float32) / 255.0
+        key = (self.dir, i)
+        f = _frames.get(key)
+        if f is not None:
+            _frames.move_to_end(key)
+            return f
+        img = cv2.imdecode(np.fromfile(str(self.dir / f"{i:05d}.jpg"), np.uint8), cv2.IMREAD_COLOR)
+        f = _frames[key] = img.astype(np.float32) / 255.0
+        while len(_frames) > MAX_CACHED_FRAMES:
+            _frames.popitem(last=False)
         return f
 
 
